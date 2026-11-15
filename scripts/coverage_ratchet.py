@@ -112,14 +112,19 @@ def main(argv: Sequence[str]) -> int:
             continue
         value = round(100.0 * hit / found, 2)
         if value < floor:
-            print(f"coverage {name}: {value:.2f}% is below the floor of {floor:.2f}%; the ratchet only goes up")
+            print(
+                f"coverage {name}: {value:.2f}% is below the floor of {floor:.2f}%; the ratchet only goes up"
+            )
             failed = True
             continue
         raised = round(value - MARGIN, 2)
         if raised > floor and not args.check:
             text = raise_floor(text, name, raised)
             write_badge(pathlib.Path(args.badges), name, raised)
-            print(f"coverage {name}: {value:.2f}%, floor raised from {floor:.2f}% to {raised:.2f}%; commit the floors and the badge")
+            print(
+                f"coverage {name}: {value:.2f}%, floor raised from {floor:.2f}% to {raised:.2f}%;"
+                " commit the floors and the badge"
+            )
         else:
             print(f"coverage {name}: {value:.2f}% (floor {floor:.2f}%)")
     if not args.check:

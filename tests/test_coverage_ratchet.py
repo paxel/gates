@@ -30,12 +30,20 @@ class CoverageRatchetTest(unittest.TestCase):
             f'[[parts]]\nname = "core"\nlcov = "core.lcov"\nfloor = {floor}\n{exclude}'
             '\n[[parts]]\nname = "gui"\nlcov = "gui.lcov"\nfloor = 50.00\n'
         )
-        (self.root / "gui.lcov").write_text(lcov(("src/gui.rs", 10, 6)))
+        (self.root / "gui.lcov").write_text(lcov(("src/gui.rs", 10, 5)))
 
     def run_it(self, *args: str) -> tuple[int, str]:
         out = StringIO()
         with redirect_stdout(out), redirect_stderr(out):
-            code = main(["--floors", str(self.root / "coverage-floors.toml"), "--badges", str(self.root / "badges"), *args])
+            code = main(
+                [
+                    "--floors",
+                    str(self.root / "coverage-floors.toml"),
+                    "--badges",
+                    str(self.root / "badges"),
+                    *args,
+                ]
+            )
         return code, out.getvalue()
 
     def test_below_the_floor_fails(self) -> None:
@@ -62,7 +70,9 @@ class CoverageRatchetTest(unittest.TestCase):
         self.assertIn("floor raised from 80.00% to 94.90%", out)
 
     def test_excluded_files_are_left_out(self) -> None:
-        self.write(90.0, ("src/a.rs", 100, 95), ("src/beeper.rs", 100, 0), exclude='exclude = ["src/beeper.rs"]\n')
+        self.write(
+            90.0, ("src/a.rs", 100, 95), ("src/beeper.rs", 100, 0), exclude='exclude = ["src/beeper.rs"]\n'
+        )
         self.assertEqual(self.run_it("--check")[0], 0)
 
     def test_an_empty_measure_fails(self) -> None:
