@@ -26,8 +26,11 @@ jobs:
     name: Vulnerable dependencies and licences (OSV-Scanner)
     runs-on: ubuntu-24.04
     steps:
+      # The caller goes to src/ and gates beside it to .gates, so no tool that walks the
+      # caller's tree ever sees gates' own files or its fixtures.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          path: src
           persist-credentials: false
       # The gate scripts of the very commit the caller pinned (AGENTS.md).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -38,6 +41,6 @@ jobs:
           persist-credentials: false
       - uses: ./.gates/actions/vulns
         with:
-          root: ${{ inputs.root }}
+          root: src/${{ inputs.root }}
           strict: ${{ inputs.strict }}
           exclude: ${{ inputs.exclude }}

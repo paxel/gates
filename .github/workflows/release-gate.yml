@@ -41,8 +41,11 @@ jobs:
       contents: read
       security-events: read
     steps:
+      # The caller goes to src/ and gates beside it to .gates, so no tool that walks the
+      # caller's tree ever sees gates' own files or its fixtures.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          path: src
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -65,18 +68,22 @@ jobs:
           GH_TOKEN="$ALERTS_TOKEN" gh api --paginate "repos/$REPO/secret-scanning/alerts?state=open&per_page=100" \
             --jq '.[]' > secrets.jsonl
       - name: Gate
+        working-directory: src
         env:
           IGNORES: ${{ inputs.ignores }}
         run: |
           test -f "$IGNORES" || { echo "::error::no $IGNORES: every repository accepts its findings there"; exit 1; }
-          python3 .gates/scripts/alerts_gate.py --code code.jsonl --secrets secrets.jsonl --ignores "$IGNORES"
+          python3 ../.gates/scripts/alerts_gate.py --code ../code.jsonl --secrets ../secrets.jsonl --ignores "$IGNORES"
 
   vulns:
     name: No known vulnerability, no licence outside the allowlist
     runs-on: ubuntu-24.04
     steps:
+      # The caller goes to src/ and gates beside it to .gates, so no tool that walks the
+      # caller's tree ever sees gates' own files or its fixtures.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          path: src
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -86,6 +93,7 @@ jobs:
           persist-credentials: false
       - uses: ./.gates/actions/vulns
         with:
+          root: src
           strict: ${{ inputs.strict }}
           exclude: ${{ inputs.osv-exclude }}
 

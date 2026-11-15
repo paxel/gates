@@ -39,16 +39,20 @@ Prefix `gate`, see `docs/agents/ticket-ids.md`.
 
 ## How a shared workflow finds its scripts
 
-A shared workflow checks gates out at `job.workflow_sha` into `.gates` and runs
-`./.gates/actions/<name>`. The scripts are therefore always the ones of the commit the caller
-pinned; there is no second version to keep in step.
+A shared workflow checks the caller out into `src/` and gates, at `job.workflow_sha`, beside it
+into `.gates`, then runs `./.gates/actions/<name>` on `src/<root>`. The scripts are therefore
+always the ones of the commit the caller pinned, and no tool that walks the caller's tree
+(ruff, eslint, prettier, mypy, flutter analyze) ever sees gates' files or its red fixtures.
 
 ## Rules
 
 - Every repository has every check of the standard, unless it has nothing for that check to
   look at. "We have no time" or "it is red" is not such a reason.
-- A gate that has never been seen red proves nothing: every gate has a fixture with a planted
-  finding, and the self-test fails unless that case fails.
+- A gate that has never been seen red proves nothing: the OSV gate (vulnerability and missing
+  lockfile), the six stack gates, the four content gates, the ratchet and the alert gate each
+  have a fixture with a planted finding, and the self-test fails unless that case fails. CodeQL,
+  SonarQube Cloud, fuzzing, provenance, the alert download and the audit have no red fixture
+  yet; do not claim more than this list.
 - A gate never passes on what it could not read. A missing token, an empty scan or a stack
   without a lockfile is a failure, not a pass.
 - An accepted finding carries a reason and a date in the repo's ignore file; the date passing

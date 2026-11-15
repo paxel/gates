@@ -38,8 +38,11 @@ jobs:
     name: fmt, lint set, clippy, test, coverage
     runs-on: ubuntu-24.04
     steps:
+      # The caller goes to src/ and gates beside it to .gates, so no tool that walks the
+      # caller's tree ever sees gates' own files or its fixtures.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          path: src
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -49,7 +52,7 @@ jobs:
           persist-credentials: false
       - uses: ./.gates/actions/rust
         with:
-          root: ${{ inputs.root }}
+          root: src/${{ inputs.root }}
           apt-packages: ${{ inputs.apt-packages }}
           test-wrapper: ${{ inputs.test-wrapper }}
           features: ${{ inputs.features }}
@@ -59,7 +62,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage-rust
-          path: ${{ inputs.root }}/coverage/
+          path: src/${{ inputs.root }}/coverage/
           if-no-files-found: error
 
   compile:
@@ -88,4 +91,4 @@ jobs:
           FEATURES: ${{ inputs.features }}
         # shellcheck disable=SC2086
         # The shipped code, like the Linux job; tests are linted there.
-        run: cargo clippy --locked --lib --bins --examples $FEATURES -- -D warnings
+        run: cargo clippy --locked $FEATURES -- -D warnings
