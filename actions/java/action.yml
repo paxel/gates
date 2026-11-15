@@ -1,6 +1,9 @@
 name: Java gate
 description: Maven verify with Error Prone, SpotBugs and JaCoCo, then the coverage ratchet.
 inputs:
+  root:
+    description: The project's root (where coverage-floors.toml and the pin files are), relative to the workspace.
+    default: .
   modules:
     description: One line per Maven project, "<part> <directory>".
     default: java .
@@ -13,6 +16,7 @@ runs:
     - name: Java version
       id: java
       shell: bash
+      working-directory: ${{ inputs.root }}
       run: |
         test -f .java-version || { echo "::error::no .java-version: the JDK must be pinned (Q15)"; exit 1; }
         echo "version=$(tr -d '[:space:]' < .java-version)" >> "$GITHUB_OUTPUT"
@@ -25,6 +29,7 @@ runs:
 
     - name: Error Prone, SpotBugs, tests, coverage ratchet
       shell: bash
+      working-directory: ${{ inputs.root }}
       env:
         MODULES: ${{ inputs.modules }}
       run: |
@@ -34,12 +39,12 @@ runs:
         while read -r part dir; do
           [ -z "$part" ] && continue
           echo "::group::$part ($dir)"
-          python3 .gates/scripts/config_check.py --stack java --dir "$dir" --configs .gates/configs
+          python3 "$GITHUB_WORKSPACE/.gates/scripts/config_check.py" --stack java --dir "$dir" --configs "$GITHUB_WORKSPACE/.gates/configs"
           (cd "$dir" && mvn --batch-mode --no-transfer-progress verify)
-          python3 .gates/scripts/to_lcov.py jacoco "$dir/target/site/jacoco/jacoco.xml" > "coverage/$part.lcov"
+          python3 "$GITHUB_WORKSPACE/.gates/scripts/to_lcov.py" jacoco "$dir/target/site/jacoco/jacoco.xml" > "coverage/$part.lcov"
           # SonarQube Cloud reads Java coverage as JaCoCo XML.
           cp "$dir/target/site/jacoco/jacoco.xml" "coverage/$part.jacoco.xml"
           set -- "$@" --part "$part"
           echo "::endgroup::"
         done <<< "$MODULES"
-        python3 .gates/scripts/coverage_ratchet.py --floors coverage-floors.toml --check "$@"
+        python3 "$GITHUB_WORKSPACE/.gates/scripts/coverage_ratchet.py" --floors coverage-floors.toml --check "$@"

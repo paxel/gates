@@ -1,6 +1,9 @@
 name: Python gate
 description: ruff format and check with the strict config, mypy --strict, tests with coverage and the ratchet for uv projects.
 inputs:
+  root:
+    description: The project's root (where coverage-floors.toml and the pin files are), relative to the workspace.
+    default: .
   packages:
     description: One line per project, "<part> <directory>"; each has a pyproject.toml and a uv.lock.
     default: python .
@@ -14,6 +17,7 @@ runs:
 
     - name: ruff, mypy, tests, coverage ratchet
       shell: bash
+      working-directory: ${{ inputs.root }}
       env:
         PACKAGES: ${{ inputs.packages }}
       run: |
@@ -24,7 +28,7 @@ runs:
           [ -z "$part" ] && continue
           echo "::group::$part ($dir)"
           test -f "$dir/.python-version" || test -f .python-version || { echo "::error::no .python-version (Q15)"; exit 1; }
-          python3 .gates/scripts/config_check.py --stack python --dir "$dir" --configs .gates/configs
+          python3 "$GITHUB_WORKSPACE/.gates/scripts/config_check.py" --stack python --dir "$dir" --configs "$GITHUB_WORKSPACE/.gates/configs"
           (cd "$dir" && uv sync --locked --all-extras --dev)
           (cd "$dir" && uv run ruff format --check .)
           (cd "$dir" && uv run ruff check .)
@@ -36,4 +40,4 @@ runs:
           set -- "$@" --part "$part"
           echo "::endgroup::"
         done <<< "$PACKAGES"
-        python3 .gates/scripts/coverage_ratchet.py --floors coverage-floors.toml --check "$@"
+        python3 "$GITHUB_WORKSPACE/.gates/scripts/coverage_ratchet.py" --floors coverage-floors.toml --check "$@"

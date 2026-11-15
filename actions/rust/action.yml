@@ -1,8 +1,8 @@
 name: Rust gate
 description: fmt, the lint set, clippy -D warnings, tests and the coverage ratchet for one Rust workspace.
 inputs:
-  working-directory:
-    description: The directory with the workspace's Cargo.toml.
+  root:
+    description: The project's root (Cargo.toml, rust-toolchain.toml, coverage-floors.toml), relative to the workspace.
     default: .
   apt-packages:
     description: Extra Debian packages the build needs (space separated).
@@ -27,7 +27,7 @@ runs:
     # rust-toolchain.toml is the only source of the version (Q15); rustup installs it.
     - name: Toolchain from rust-toolchain.toml
       shell: bash
-      working-directory: ${{ inputs.working-directory }}
+      working-directory: ${{ inputs.root }}
       run: |
         test -f rust-toolchain.toml || { echo "::error::no rust-toolchain.toml: the toolchain must be pinned (Q15)"; exit 1; }
         rustup toolchain install
@@ -35,7 +35,7 @@ runs:
 
     - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       with:
-        workspaces: ${{ inputs.working-directory }}
+        workspaces: ${{ inputs.root }}
 
     - name: Extra system packages
       if: inputs.apt-packages != ''
@@ -49,16 +49,16 @@ runs:
 
     - name: Every crate carries the lint set
       shell: bash
-      run: python3 .gates/scripts/rust_lints.py --root "${{ inputs.working-directory }}" --lints .gates/configs/rust/lints.toml
+      run: python3 .gates/scripts/rust_lints.py --root "${{ inputs.root }}" --lints .gates/configs/rust/lints.toml
 
     - name: Formatting
       shell: bash
-      working-directory: ${{ inputs.working-directory }}
+      working-directory: ${{ inputs.root }}
       run: cargo fmt --all -- --check
 
     - name: Clippy on shipped code
       shell: bash
-      working-directory: ${{ inputs.working-directory }}
+      working-directory: ${{ inputs.root }}
       env:
         FEATURES: ${{ inputs.features }}
       # shellcheck disable=SC2086
@@ -67,7 +67,7 @@ runs:
     # Tests may unwrap, index and panic: that is how they fail. The rest of the set stays.
     - name: Clippy on tests
       shell: bash
-      working-directory: ${{ inputs.working-directory }}
+      working-directory: ${{ inputs.root }}
       env:
         FEATURES: ${{ inputs.features }}
       # shellcheck disable=SC2086
@@ -78,7 +78,7 @@ runs:
 
     - name: Tests
       shell: bash
-      working-directory: ${{ inputs.working-directory }}
+      working-directory: ${{ inputs.root }}
       env:
         FEATURES: ${{ inputs.features }}
         WRAPPER: ${{ inputs.test-wrapper }}
@@ -94,23 +94,22 @@ runs:
     - name: Coverage ratchet
       if: inputs.coverage != ''
       shell: bash
-      working-directory: ${{ inputs.working-directory }}
+      working-directory: ${{ inputs.root }}
       env:
         PARTS: ${{ inputs.coverage }}
         FEATURES: ${{ inputs.features }}
         WRAPPER: ${{ inputs.test-wrapper }}
         RATCHET: ${{ github.workspace }}/.gates/scripts/coverage_ratchet.py
-        FLOORS: ${{ github.workspace }}/coverage-floors.toml
       run: |
-        test -f "$FLOORS" || { echo "::error::no coverage-floors.toml at the repository root (Q4)"; exit 1; }
-        mkdir -p "$GITHUB_WORKSPACE/coverage"
+        test -f coverage-floors.toml || { echo "::error::no coverage-floors.toml at the repository root (Q4)"; exit 1; }
+        mkdir -p coverage
         set --
         while read -r name args; do
           [ -z "$name" ] && continue
           # shellcheck disable=SC2086
           $WRAPPER cargo tarpaulin --engine llvm --locked $FEATURES $args --skip-clean \
             --out Lcov --output-dir "$RUNNER_TEMP/tarpaulin-$name"
-          mv "$RUNNER_TEMP/tarpaulin-$name/lcov.info" "$GITHUB_WORKSPACE/coverage/$name.lcov"
+          mv "$RUNNER_TEMP/tarpaulin-$name/lcov.info" "coverage/$name.lcov"
           set -- "$@" --part "$name"
         done <<< "$PARTS"
-        python3 "$RATCHET" --floors "$FLOORS" --check "$@"
+        python3 "$RATCHET" --floors coverage-floors.toml --check "$@"

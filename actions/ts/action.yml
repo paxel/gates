@@ -1,6 +1,9 @@
 name: TypeScript gate
 description: prettier, strict typescript-eslint, tsc, tests with coverage and the ratchet for npm packages.
 inputs:
+  root:
+    description: The project's root (where coverage-floors.toml and the pin files are), relative to the workspace.
+    default: .
   packages:
     description: >-
       One line per package, "<part> <directory>". Each package has a `test:coverage` npm
@@ -15,10 +18,11 @@ runs:
     # .nvmrc is the only source of the Node version (Q15).
     - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:
-        node-version-file: .nvmrc
+        node-version-file: ${{ inputs.root }}/.nvmrc
 
     - name: prettier, eslint, tsc, tests, coverage ratchet
       shell: bash
+      working-directory: ${{ inputs.root }}
       env:
         PACKAGES: ${{ inputs.packages }}
       run: |
@@ -28,7 +32,7 @@ runs:
         while read -r part dir; do
           [ -z "$part" ] && continue
           echo "::group::$part ($dir)"
-          python3 .gates/scripts/config_check.py --stack ts --dir "$dir" --configs .gates/configs
+          python3 "$GITHUB_WORKSPACE/.gates/scripts/config_check.py" --stack ts --dir "$dir" --configs "$GITHUB_WORKSPACE/.gates/configs"
           (cd "$dir" && npm ci --ignore-scripts)
           (cd "$dir" && npx --no-install prettier --check .)
           (cd "$dir" && npx --no-install eslint --max-warnings 0 .)
@@ -38,4 +42,4 @@ runs:
           set -- "$@" --part "$part"
           echo "::endgroup::"
         done <<< "$PACKAGES"
-        python3 .gates/scripts/coverage_ratchet.py --floors coverage-floors.toml --check "$@"
+        python3 "$GITHUB_WORKSPACE/.gates/scripts/coverage_ratchet.py" --floors coverage-floors.toml --check "$@"

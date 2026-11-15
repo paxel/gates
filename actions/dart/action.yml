@@ -1,6 +1,9 @@
 name: Dart gate
 description: format, strict analyze with infos failing, tests and the coverage ratchet for Dart and Flutter packages.
 inputs:
+  root:
+    description: The project's root (where coverage-floors.toml and the pin files are), relative to the workspace.
+    default: .
   packages:
     description: >-
       One line per package: its part name in coverage-floors.toml, then its directory,
@@ -20,6 +23,7 @@ runs:
     # .fvmrc is the only source of the Flutter version (Q15).
     - name: Flutter from .fvmrc
       shell: bash
+      working-directory: ${{ inputs.root }}
       run: |
         test -f .fvmrc || { echo "::error::no .fvmrc: the Flutter version must be pinned (Q15)"; exit 1; }
         version=$(python3 -c 'import json; print(json.load(open(".fvmrc"))["flutter"])')
@@ -30,6 +34,7 @@ runs:
     - name: Extra system packages
       if: inputs.apt-packages != ''
       shell: bash
+      working-directory: ${{ inputs.root }}
       env:
         PACKAGES: ${{ inputs.apt-packages }}
       run: |
@@ -39,6 +44,7 @@ runs:
 
     - name: Format, strict analysis, tests, coverage ratchet
       shell: bash
+      working-directory: ${{ inputs.root }}
       env:
         PACKAGES: ${{ inputs.packages }}
         WRAPPER: ${{ inputs.test-wrapper }}
@@ -49,7 +55,7 @@ runs:
         while read -r part dir; do
           [ -z "$part" ] && continue
           echo "::group::$part ($dir)"
-          python3 .gates/scripts/config_check.py --stack dart --dir "$dir" --configs .gates/configs
+          python3 "$GITHUB_WORKSPACE/.gates/scripts/config_check.py" --stack dart --dir "$dir" --configs "$GITHUB_WORKSPACE/.gates/configs"
           (cd "$dir" && flutter pub get --enforce-lockfile)
           dart format --output=none --set-exit-if-changed "$dir"
           (cd "$dir" && flutter analyze --fatal-infos --fatal-warnings)
@@ -59,4 +65,4 @@ runs:
           set -- "$@" --part "$part"
           echo "::endgroup::"
         done <<< "$PACKAGES"
-        python3 .gates/scripts/coverage_ratchet.py --floors coverage-floors.toml --check "$@"
+        python3 "$GITHUB_WORKSPACE/.gates/scripts/coverage_ratchet.py" --floors coverage-floors.toml --check "$@"

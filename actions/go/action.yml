@@ -1,6 +1,9 @@
 name: Go gate
 description: gofmt, golangci-lint with the strict config, tests and the coverage ratchet for Go modules.
 inputs:
+  root:
+    description: The project's root (where coverage-floors.toml and the pin files are), relative to the workspace.
+    default: .
   modules:
     description: One line per module, "<part> <directory>", e.g. "go .".
     default: go .
@@ -11,16 +14,18 @@ runs:
 
     - name: Every module carries the strict config and the toolchain pin
       shell: bash
+      working-directory: ${{ inputs.root }}
       env:
         MODULES: ${{ inputs.modules }}
       run: |
         set --
         while read -r _ dir; do [ -n "$dir" ] && set -- "$@" --dir "$dir"; done <<< "$MODULES"
-        python3 .gates/scripts/config_check.py --stack go --configs .gates/configs "$@"
+        python3 "$GITHUB_WORKSPACE/.gates/scripts/config_check.py" --stack go --configs "$GITHUB_WORKSPACE/.gates/configs" "$@"
 
     - name: First module
       id: first
       shell: bash
+      working-directory: ${{ inputs.root }}
       env:
         MODULES: ${{ inputs.modules }}
       run: echo "dir=$(head -n1 <<< "$MODULES" | awk '{print $2}')" >> "$GITHUB_OUTPUT"
@@ -28,10 +33,11 @@ runs:
     # go.mod's toolchain line is the only source of the version (Q15).
     - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
-        go-version-file: ${{ steps.first.outputs.dir }}/go.mod
+        go-version-file: ${{ inputs.root }}/${{ steps.first.outputs.dir }}/go.mod
 
     - name: gofmt, golangci-lint, tests, coverage ratchet
       shell: bash
+      working-directory: ${{ inputs.root }}
       env:
         MODULES: ${{ inputs.modules }}
       run: |
@@ -45,9 +51,9 @@ runs:
           unformatted=$(cd "$dir" && gofmt -l .)
           [ -z "$unformatted" ] || { echo "::error::not gofmt-formatted: $unformatted"; exit 1; }
           (cd "$dir" && "$(go env GOPATH)/bin/golangci-lint" run ./...)
-          (cd "$dir" && go test -race -coverprofile="$GITHUB_WORKSPACE/coverage/$part.out" ./...)
-          python3 .gates/scripts/to_lcov.py go "coverage/$part.out" > "coverage/$part.lcov"
+          (cd "$dir" && go test -race -coverprofile="coverage/$part.out" ./...)
+          python3 "$GITHUB_WORKSPACE/.gates/scripts/to_lcov.py" go "coverage/$part.out" > "coverage/$part.lcov"
           set -- "$@" --part "$part"
           echo "::endgroup::"
         done <<< "$MODULES"
-        python3 .gates/scripts/coverage_ratchet.py --floors coverage-floors.toml --check "$@"
+        python3 "$GITHUB_WORKSPACE/.gates/scripts/coverage_ratchet.py" --floors coverage-floors.toml --check "$@"

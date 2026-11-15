@@ -5,6 +5,10 @@ name: Go
 on:
   workflow_call:
     inputs:
+      root:
+        description: The project's root, relative to the repository.
+        type: string
+        default: .
       modules:
         description: One line per module, "<part> <directory>".
         type: string
@@ -29,10 +33,11 @@ jobs:
           persist-credentials: false
       - uses: ./.gates/actions/go
         with:
+          root: ${{ inputs.root }}
           modules: ${{ inputs.modules }}
       - name: Keep the coverage for SonarQube Cloud
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage-go
-          path: coverage/
+          path: ${{ inputs.root }}/coverage/
           if-no-files-found: error
