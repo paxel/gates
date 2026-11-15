@@ -1,0 +1,62 @@
+name: CodeQL
+
+# Shared workflow: CodeQL for the caller's languages and always its workflows. Callers pin it:
+#   uses: paxel/gates/.github/workflows/codeql.yml@<sha> # vX.Y.Z
+#   with: { languages: '["rust"]' }
+# CodeQL has no Dart analysis; a Dart repository passes '[]' and gets the workflows analysed.
+# The same file is gates' own CodeQL run (push, pull request, weekly) on Python and actions.
+on:
+  workflow_call:
+    inputs:
+      languages:
+        description: JSON list of CodeQL languages besides actions, e.g. '["rust","python"]'.
+        type: string
+        default: "[]"
+  push:
+    branches: [summer]
+  pull_request:
+  schedule:
+    - cron: "47 4 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  languages:
+    name: Languages
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.list.outputs.matrix }}
+    steps:
+      # A call passes its languages; gates' own run (no inputs) analyses Python.
+      - id: list
+        env:
+          LANGUAGES: ${{ inputs.languages || '["python"]' }}
+        run: |
+          echo "matrix=$(python3 -c 'import json, os; print(json.dumps(["actions", *json.loads(os.environ["LANGUAGES"])]))')" >> "$GITHUB_OUTPUT"
+
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    needs: languages
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ${{ fromJSON(needs.languages.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          languages: ${{ matrix.language }}
+          # Go has no build-free mode; every other language here does.
+          build-mode: ${{ matrix.language == 'go' && 'autobuild' || 'none' }}
+
+      - uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          category: /language:${{ matrix.language }}
