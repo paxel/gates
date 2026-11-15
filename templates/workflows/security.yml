@@ -1,0 +1,24 @@
+name: Security
+
+# Weekly, and by hand: the release gate without a version, strict. It fails on every open
+# code-scanning or secret-scanning alert that code-scanning-ignores.toml does not accept, on a
+# known vulnerability, on an unmaintained dependency and on a licence outside the allowlist,
+# and when an accepted finding's date has passed: that is the review.
+on:
+  schedule:
+    - cron: "23 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    uses: paxel/gates/.github/workflows/release-gate.yml@GATES_SHA # GATES_VERSION
+    permissions:
+      contents: read
+      security-events: read
+    with:
+      strict: true
+    secrets:
+      alerts-token: ${{ secrets.GATES_ALERTS_TOKEN }}

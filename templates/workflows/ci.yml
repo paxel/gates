@@ -1,0 +1,49 @@
+name: CI
+
+# The gates every push and pull request runs, from paxel/gates (the standard: its
+# standard.toml). Keep the jobs of this repository's stacks and delete the others; Sonar waits
+# for them because it reads the coverage they measured.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  vulns:
+    uses: paxel/gates/.github/workflows/vulns.yml@GATES_SHA # GATES_VERSION
+
+  rust:
+    uses: paxel/gates/.github/workflows/rust.yml@GATES_SHA # GATES_VERSION
+    with:
+      also-on: '["windows-latest","macos-latest"]'
+
+  dart:
+    uses: paxel/gates/.github/workflows/dart.yml@GATES_SHA # GATES_VERSION
+    with:
+      packages: |
+        flutter-app .
+
+  go:
+    uses: paxel/gates/.github/workflows/go.yml@GATES_SHA # GATES_VERSION
+
+  ts:
+    uses: paxel/gates/.github/workflows/ts.yml@GATES_SHA # GATES_VERSION
+
+  python:
+    uses: paxel/gates/.github/workflows/python.yml@GATES_SHA # GATES_VERSION
+
+  java:
+    uses: paxel/gates/.github/workflows/java.yml@GATES_SHA # GATES_VERSION
+
+  sonar:
+    needs: [rust, dart, go, ts, python, java]
+    uses: paxel/gates/.github/workflows/sonar.yml@GATES_SHA # GATES_VERSION
+    secrets:
+      sonar-token: ${{ secrets.SONAR_TOKEN }}

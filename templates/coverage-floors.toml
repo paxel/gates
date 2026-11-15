@@ -1,0 +1,9 @@
+# The coverage ratchet (paxel/gates coverage_ratchet.py): one part per measured package. The
+# stack workflow writes coverage/<name>.lcov; CI fails below the floor. Run the ratchet without
+# --check locally after a rise; it raises the floor to the measured value minus 0.1 and writes
+# .github/badges/coverage-<name>.json. Commit both with the change that earned them.
+
+[[parts]]
+name = "rust"
+lcov = "coverage/rust.lcov"
+floor = 0.00

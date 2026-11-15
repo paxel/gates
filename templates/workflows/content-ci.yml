@@ -1,0 +1,19 @@
+name: CI
+
+# The checks of a repository without app code, from paxel/gates. One kind per repository:
+# formulas (with tap), scoop, skills or site (with the page directories).
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  content:
+    uses: paxel/gates/.github/workflows/content.yml@GATES_SHA # GATES_VERSION
+    with:
+      kind: scoop
+      paths: |
+        bucket
