@@ -1,0 +1,43 @@
+name: Vulnerabilities and licences
+
+# Shared workflow: osv-scanner on every lockfile of the caller, gated by osv_gate.py with the
+# standard's licence allowlist. Callers pin it:
+#   uses: paxel/gates/.github/workflows/vulns.yml@<sha> # vX.Y.Z
+on:
+  workflow_call:
+    inputs:
+      root:
+        type: string
+        default: .
+      strict:
+        description: Unmaintained notices block too (the weekly run).
+        type: boolean
+        default: false
+      exclude:
+        description: Directory names to leave out of the scan, one per line.
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  osv:
+    name: Vulnerable dependencies and licences (OSV-Scanner)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The gate scripts of the very commit the caller pinned (AGENTS.md).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .gates
+          persist-credentials: false
+      - uses: ./.gates/actions/vulns
+        with:
+          root: ${{ inputs.root }}
+          strict: ${{ inputs.strict }}
+          exclude: ${{ inputs.exclude }}

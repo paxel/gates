@@ -1,0 +1,56 @@
+name: OSV gate
+description: osv-scanner on every lockfile with the standard's licence allowlist, decided by osv_gate.py.
+inputs:
+  root:
+    description: Directory to scan, relative to the workspace.
+    default: .
+  strict:
+    description: "true: unmaintained notices block too (the weekly run)."
+    default: "false"
+  exclude:
+    description: Directory names to leave out of the scan, one per line.
+    default: ""
+runs:
+  using: composite
+  steps:
+    - uses: ./.gates/actions/python-pin
+
+    - name: Scan arguments
+      id: args
+      shell: bash
+      env:
+        GATES_DIR: .gates
+        ROOT: ${{ inputs.root }}
+        EXCLUDE: ${{ inputs.exclude }}
+      run: |
+        allow=$(python3 "$GATES_DIR/scripts/osv_gate.py" --allowlist "$GATES_DIR/standard.toml")
+        {
+          echo "args<<ARGS"
+          echo "--format=json"
+          echo "--output-file=osv-results.json"
+          echo "--all-packages"
+          echo "--licenses=$allow"
+          echo "--x-exclude=$GATES_DIR"
+          while IFS= read -r dir; do [ -n "$dir" ] && echo "--x-exclude=$dir"; done <<< "$EXCLUDE"
+          echo "--recursive"
+          echo "$ROOT"
+          echo "ARGS"
+        } >> "$GITHUB_OUTPUT"
+
+    # osv-scanner exits non-zero on any finding; osv_gate.py decides what blocks.
+    - name: osv-scanner
+      continue-on-error: true
+      uses: google/osv-scanner-action/osv-scanner-action@b1d267aea5211fa648d9d442fa64b90dbdcbdd36 # v2.7.0
+      with:
+        scan-args: ${{ steps.args.outputs.args }}
+
+    - name: No known vulnerability, no licence outside the allowlist, every lockfile read
+      shell: bash
+      env:
+        GATES_DIR: .gates
+        ROOT: ${{ inputs.root }}
+        STRICT: ${{ inputs.strict }}
+      run: |
+        set -- --results osv-results.json --root "$ROOT" --standard "$GATES_DIR/standard.toml"
+        [ "$STRICT" = "true" ] && set -- "$@" --strict
+        python3 "$GATES_DIR/scripts/osv_gate.py" "$@"

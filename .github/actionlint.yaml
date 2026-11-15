@@ -1,0 +1,7 @@
+# actionlint 1.7.12 does not know the job context's workflow identity properties yet
+# (job.workflow_repository, job.workflow_sha), which GitHub documents and the shared
+# workflows rely on to check gates out at the pinned commit.
+paths:
+  .github/workflows/**/*.yml:
+    ignore:
+      - 'property "workflow_(repository|sha)" is not defined'

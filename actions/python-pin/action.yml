@@ -1,0 +1,17 @@
+name: Python matches the pin
+description: Fails when the runner's python3 is not the version in gates' .python-version (G3).
+runs:
+  using: composite
+  steps:
+    - name: python3 is the pinned version
+      shell: bash
+      env:
+        GATES_DIR: .gates
+      run: |
+        want=$(tr -d '[:space:]' < "$GATES_DIR/.python-version")
+        have=$(python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])')
+        if [ "$have" != "$want" ]; then
+          echo "::error::python3 is $have, gates pins $want (.python-version); the runner image changed"
+          exit 1
+        fi
+        echo "python3 $have matches the pin"
