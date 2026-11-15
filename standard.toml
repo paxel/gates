@@ -47,7 +47,8 @@ workflow = "dart.yml"
 [[stacks]]
 id = "go"
 manifests = ["go.mod"]
-lockfiles = ["go.sum"]
+# osv-scanner reads the module list from go.mod itself.
+lockfiles = ["go.mod"]
 pin = "go.mod"
 workflow = "go.yml"
 
