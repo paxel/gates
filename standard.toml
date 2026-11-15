@@ -263,9 +263,9 @@ detect = { kind = "uses", file = "ci.yml", workflows = ["content.yml"] }
 [[checks]]
 id = "security"
 group = "Workflows"
-label = "Weekly Security calls release-gate.yml and vulns.yml"
+label = "Weekly Security calls release-gate.yml (alerts, vulnerabilities, licences)"
 applies = "all"
-detect = { kind = "uses", file = "security.yml", workflows = ["release-gate.yml", "vulns.yml"], schedule = true }
+detect = { kind = "uses", file = "security.yml", workflows = ["release-gate.yml"], schedule = true }
 
 [[checks]]
 id = "codeql"

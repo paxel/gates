@@ -261,6 +261,12 @@ def k_uses(repo: Repo, d: dict[str, Any], s: dict[str, Any], c: Context) -> tupl
     if t is None:
         return False, f"no .github/workflows/{d['file']}"
     called = {m.group(1) for m in GATES_USE.finditer(t)}
+    if repo.name == "gates":
+        # gates calls its own shared workflows by path.
+        called |= set(re.findall(r"uses:\s*\./\.github/workflows/([\w.-]+\.yml)", t))
+        # Its codeql.yml and fuzz.yml are the shared workflows and its own runs at once.
+        if "workflow_call:" in t:
+            called.add(str(d["file"]))
     want: list[str] = []
     for w in d.get("workflows") or []:
         if w == "{stack}":
@@ -285,6 +291,8 @@ def k_pinned(repo: Repo, d: dict[str, Any], s: dict[str, Any], c: Context) -> tu
     bad = []
     for name, t in workflows(repo.root).items():
         for line in t.splitlines():
+            if line.lstrip().startswith("#"):
+                continue
             m = re.search(r"uses:\s*(\S+)(.*)$", line)
             if not m or m.group(1).startswith(("./", "docker://")):
                 continue
