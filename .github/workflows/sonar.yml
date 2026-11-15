@@ -6,7 +6,7 @@ name: SonarQube Cloud
 # (coverage/<part>.lcov for Rust, Dart and TS, coverage/<part>.xml for Python,
 # coverage/<part>.jacoco.xml for Java, coverage/<part>.out for Go). Callers pin it:
 #   uses: paxel/gates/.github/workflows/sonar.yml@<sha> # vX.Y.Z
-#   secrets: { sonar-token: "${{ secrets.SONAR_TOKEN }}" }
+#   secrets: { sonar-token: "${{ secrets.SQ_TOKEN }}" }
 on:
   workflow_call:
     secrets:

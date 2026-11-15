@@ -47,4 +47,4 @@ jobs:
     needs: python
     uses: ./.github/workflows/sonar.yml
     secrets:
-      sonar-token: ${{ secrets.SONAR_TOKEN }}
+      sonar-token: ${{ secrets.SQ_TOKEN }}

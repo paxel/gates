@@ -21,4 +21,4 @@ names.
 | `badges.md`                         | top of `README.md`                    | the repo's name, Rust or not, distribution badges     |
 
 Secrets every repository sets: `GATES_ALERTS_TOKEN` (fine-grained, Secret scanning alerts: read)
-and `SONAR_TOKEN`.
+and `SQ_TOKEN` (SonarQube Cloud).

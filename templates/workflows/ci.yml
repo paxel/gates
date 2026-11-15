@@ -46,4 +46,4 @@ jobs:
     needs: [rust, dart, go, ts, python, java]
     uses: paxel/gates/.github/workflows/sonar.yml@GATES_SHA # GATES_VERSION
     secrets:
-      sonar-token: ${{ secrets.SONAR_TOKEN }}
+      sonar-token: ${{ secrets.SQ_TOKEN }}
