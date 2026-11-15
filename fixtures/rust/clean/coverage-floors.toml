@@ -1,0 +1,4 @@
+[[parts]]
+name = "rust"
+lcov = "coverage/rust.lcov"
+floor = 50.00

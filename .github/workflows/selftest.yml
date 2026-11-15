@@ -1,0 +1,172 @@
+name: Self-test
+
+# Every gate runs on a fixture twice (G8): clean, through the shared workflow a repository
+# calls, where it must pass; and with a planted finding, through the same composite action,
+# where it must fail. A job that calls a shared workflow cannot be allowed to fail, so the red
+# cases run as steps with continue-on-error and then insist on the failure. A gate that was
+# never seen red proves nothing.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  green-vulns:
+    uses: ./.github/workflows/vulns.yml
+    with:
+      root: fixtures/rust/clean
+  green-rust:
+    uses: ./.github/workflows/rust.yml
+    with:
+      root: fixtures/rust/clean
+  green-dart:
+    uses: ./.github/workflows/dart.yml
+    with:
+      root: fixtures/dart/clean
+  green-go:
+    uses: ./.github/workflows/go.yml
+    with:
+      root: fixtures/go/clean
+  green-ts:
+    uses: ./.github/workflows/ts.yml
+    with:
+      root: fixtures/ts/clean
+  green-python:
+    uses: ./.github/workflows/python.yml
+    with:
+      root: fixtures/python/clean
+  green-java:
+    uses: ./.github/workflows/java.yml
+    with:
+      root: fixtures/java/clean
+  green-formulas:
+    uses: ./.github/workflows/content.yml
+    with:
+      kind: formulas
+      root: fixtures/content/formulas/clean
+      tap: paxel/gates-fixture
+  green-scoop:
+    uses: ./.github/workflows/content.yml
+    with:
+      kind: scoop
+      root: fixtures/content/scoop/clean
+      paths: bucket
+  green-skills:
+    uses: ./.github/workflows/content.yml
+    with:
+      kind: skills
+      root: fixtures/content/skills/clean
+      paths: skills
+  green-site:
+    uses: ./.github/workflows/content.yml
+    with:
+      kind: site
+      root: fixtures/content/site/clean
+      paths: .
+
+  red:
+    name: red ${{ matrix.case }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        case: [vulns, rust, dart, go, ts, python, java, formulas, scoop, skills, site]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: .gates
+          persist-credentials: false
+
+      - id: vulns
+        if: matrix.case == 'vulns'
+        continue-on-error: true
+        uses: ./.gates/actions/vulns
+        with:
+          root: fixtures/vulns/red
+      - id: rust
+        if: matrix.case == 'rust'
+        continue-on-error: true
+        uses: ./.gates/actions/rust
+        with:
+          root: fixtures/rust/red
+          coverage: ""
+      - id: dart
+        if: matrix.case == 'dart'
+        continue-on-error: true
+        uses: ./.gates/actions/dart
+        with:
+          root: fixtures/dart/red
+      - id: go
+        if: matrix.case == 'go'
+        continue-on-error: true
+        uses: ./.gates/actions/go
+        with:
+          root: fixtures/go/red
+      - id: ts
+        if: matrix.case == 'ts'
+        continue-on-error: true
+        uses: ./.gates/actions/ts
+        with:
+          root: fixtures/ts/red
+      - id: python
+        if: matrix.case == 'python'
+        continue-on-error: true
+        uses: ./.gates/actions/python
+        with:
+          root: fixtures/python/red
+      - id: java
+        if: matrix.case == 'java'
+        continue-on-error: true
+        uses: ./.gates/actions/java
+        with:
+          root: fixtures/java/red
+      - id: formulas
+        if: matrix.case == 'formulas'
+        continue-on-error: true
+        uses: ./.gates/actions/content
+        with:
+          kind: formulas
+          root: fixtures/content/formulas/red
+          tap: paxel/gates-fixture
+      - id: scoop
+        if: matrix.case == 'scoop'
+        continue-on-error: true
+        uses: ./.gates/actions/content
+        with:
+          kind: scoop
+          root: fixtures/content/scoop/red
+          paths: bucket
+      - id: skills
+        if: matrix.case == 'skills'
+        continue-on-error: true
+        uses: ./.gates/actions/content
+        with:
+          kind: skills
+          root: fixtures/content/skills/red
+          paths: skills
+      - id: site
+        if: matrix.case == 'site'
+        continue-on-error: true
+        uses: ./.gates/actions/content
+        with:
+          kind: site
+          root: fixtures/content/site/red
+          paths: .
+
+      - name: The planted finding failed the gate
+        env:
+          OUTCOME: ${{ steps[matrix.case].outcome }}
+          CASE: ${{ matrix.case }}
+        run: |
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "::error::the $CASE gate let its planted finding through (outcome: $OUTCOME)"
+            exit 1
+          fi
+          echo "the $CASE gate failed on its planted finding, as it must"

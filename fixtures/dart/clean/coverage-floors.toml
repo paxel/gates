@@ -1,0 +1,4 @@
+[[parts]]
+name = "dart"
+lcov = "coverage/dart.lcov"
+floor = 50.00

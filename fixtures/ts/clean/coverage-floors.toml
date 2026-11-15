@@ -1,0 +1,4 @@
+[[parts]]
+name = "ts"
+lcov = "coverage/ts.lcov"
+floor = 50.00

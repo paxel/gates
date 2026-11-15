@@ -1,0 +1,9 @@
+{
+    "version": "1.0.0",
+    "description": "Scoop manifest fixture of paxel/gates: the planted finding is a hash that is no sha256",
+    "homepage": "https://github.com/paxel/gates",
+    "license": "MIT",
+    "url": "https://github.com/paxel/gates/releases/download/v1.0.0/gates-fixture.zip",
+    "hash": "not-a-hash",
+    "bin": "gates-fixture.exe"
+}

@@ -1,0 +1,4 @@
+[[parts]]
+name = "java"
+lcov = "coverage/java.lcov"
+floor = 50.00

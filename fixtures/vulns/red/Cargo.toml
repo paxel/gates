@@ -1,0 +1,11 @@
+[package]
+name = "gates-fixture-vulns"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+# The planted finding: time 0.1.43 has RUSTSEC-2020-0071. The lockfile pins it; the OSV
+# gate must fail.
+[dependencies]
+time = "=0.1.43"
