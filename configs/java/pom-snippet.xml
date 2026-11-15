@@ -1,7 +1,8 @@
 <!--
   The strict Java build of the standard (Q14): Error Prone as a compiler plugin with warnings
   failing the build, SpotBugs failing on any bug, JaCoCo for the coverage ratchet and the
-  toolchains plugin reading .java-version (Q15). A repository's pom.xml carries these parts.
+  JDK from .java-version (Q15). A repository's pom.xml carries these parts, and Error Prone
+  needs the javac exports in .mvn/jvm.config (see fixtures/java/clean/.mvn/jvm.config).
 -->
 <build>
   <plugins>
@@ -13,6 +14,7 @@
           <arg>-Werror</arg>
           <arg>-Xlint:all</arg>
           <arg>-XDcompilePolicy=simple</arg>
+          <arg>-XDaddTypeAnnotationsToSymbol=true</arg>
           <arg>--should-stop=ifError=FLOW</arg>
           <arg>-Xplugin:ErrorProne</arg>
         </compilerArgs>

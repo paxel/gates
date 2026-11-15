@@ -17,6 +17,7 @@ class ConfigCheckTest(unittest.TestCase):
     def run_check(self, stack: str, files: dict[str, str]) -> tuple[int, str]:
         with tempfile.TemporaryDirectory() as tmp:
             for name, text in files.items():
+                (pathlib.Path(tmp) / name).parent.mkdir(parents=True, exist_ok=True)
                 (pathlib.Path(tmp) / name).write_text(text)
             out = StringIO()
             with redirect_stdout(out):
@@ -29,7 +30,10 @@ class ConfigCheckTest(unittest.TestCase):
             "go": {".golangci.yml": "go/.golangci.yml"},
             "ts": {"eslint.config.mjs": "ts/eslint.config.mjs", "tsconfig.json": "ts/tsconfig.json"},
             "python": {"ruff.toml": "python/ruff.toml", "pyproject.toml": "python/pyproject-mypy.toml"},
-            "java": {"pom.xml": "java/pom-snippet.xml"},
+            "java": {
+                "pom.xml": "java/pom-snippet.xml",
+                ".mvn/jvm.config": "../fixtures/java/clean/.mvn/jvm.config",
+            },
         }
         for stack, files in shipped.items():
             with self.subTest(stack=stack):
