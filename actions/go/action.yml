@@ -35,6 +35,12 @@ runs:
       with:
         go-version-file: ${{ inputs.root }}/${{ steps.first.outputs.dir }}/go.mod
 
+    # A prebuilt binary: `go install` would tie golangci-lint to the project's Go version.
+    - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+      with:
+        version: v2.15.0
+        install-only: true
+
     - name: gofmt, golangci-lint, tests, coverage ratchet
       shell: bash
       working-directory: ${{ inputs.root }}
@@ -42,7 +48,6 @@ runs:
         MODULES: ${{ inputs.modules }}
       run: |
         test -f coverage-floors.toml || { echo "::error::no coverage-floors.toml at the repository root (Q4)"; exit 1; }
-        go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
         mkdir -p coverage
         set --
         while read -r part dir; do
@@ -50,7 +55,7 @@ runs:
           echo "::group::$part ($dir)"
           unformatted=$(cd "$dir" && gofmt -l .)
           [ -z "$unformatted" ] || { echo "::error::not gofmt-formatted: $unformatted"; exit 1; }
-          (cd "$dir" && "$(go env GOPATH)/bin/golangci-lint" run ./...)
+          (cd "$dir" && golangci-lint run ./...)
           (cd "$dir" && go test -race -coverprofile="coverage/$part.out" ./...)
           python3 "$GITHUB_WORKSPACE/.gates/scripts/to_lcov.py" go "coverage/$part.out" > "coverage/$part.lcov"
           set -- "$@" --part "$part"
