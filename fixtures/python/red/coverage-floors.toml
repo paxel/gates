@@ -1,0 +1,4 @@
+[[parts]]
+name = "python"
+lcov = "coverage/python.lcov"
+floor = 50.00

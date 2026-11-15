@@ -22,8 +22,7 @@ migrate_working_dir/
 #.vscode/
 
 # Flutter/Dart/Pub related
-# Libraries should not include pubspec.lock, per https://dart.dev/guides/libraries/private-files#pubspeclock.
-/pubspec.lock
+# The fixture keeps its pubspec.lock: dart.yml runs pub get --enforce-lockfile.
 **/doc/api/
 .dart_tool/
 .flutter-plugins-dependencies
