@@ -92,6 +92,11 @@ class CoverageRatchetTest(unittest.TestCase):
         self.assertEqual(self.run_it("--check", "--part", "core")[0], 1)
         self.assertEqual(self.run_it("--check", "--part", "nope")[0], 1)
 
+    def test_a_malformed_lcov_is_exit_2(self) -> None:
+        self.write(10.0, ("a", 1, 1))
+        (self.root / "gui.lcov").write_text("SF:x\nLF:many\nend_of_record\n")
+        self.assertEqual(self.run_it("--check")[0], 2)
+
     def test_no_parts_fails(self) -> None:
         (self.root / "coverage-floors.toml").write_text("")
         self.assertEqual(self.run_it("--check")[0], 1)

@@ -110,7 +110,7 @@ def main(argv: Sequence[str]) -> int:
         name, floor = str(part["name"]), float(part["floor"])
         try:
             found, hit = measure(root / str(part["lcov"]), root, list(part.get("exclude") or []))
-        except OSError as error:
+        except (OSError, ValueError) as error:
             print(f"coverage {name}: cannot read {part['lcov']}: {error}", file=sys.stderr)
             return 2
         if found == 0:
