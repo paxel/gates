@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.mypy_cache/
+.ruff_cache/
+# Fixture build output; the fixtures themselves are committed.
+fixtures/**/target/
+fixtures/**/node_modules/
+fixtures/**/.dart_tool/
+fixtures/**/build/
+fixtures/**/coverage/
