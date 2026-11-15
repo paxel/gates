@@ -53,5 +53,7 @@ runs:
         # A tap is a git repository; a fixture below the workspace becomes one here.
         [ -d .git ] || { git init -q && git add -A && git -c user.name=gates -c user.email=gates@localhost commit -qm tap; }
         brew tap --custom-remote "$TAP" "$PWD"
+        # Homebrew loads code from a third-party tap only once it is trusted (docs.brew.sh/Tap-Trust).
+        brew trust "$TAP"
         brew style --display-cop-names "$TAP"
         brew audit --strict --tap="$TAP"
