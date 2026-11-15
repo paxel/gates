@@ -29,6 +29,9 @@ runs:
           echo "--format=json"
           echo "--output-file=osv-results.json"
           echo "--all-packages"
+          # No lockfile at all is fine for a repository without app code; a manifest without
+          # its lockfile still fails in osv_gate.py (NOT SCANNED).
+          echo "--allow-no-lockfiles"
           echo "--licenses=$allow"
           echo "--x-exclude=$GATES_DIR"
           while IFS= read -r dir; do [ -n "$dir" ] && echo "--x-exclude=$dir"; done <<< "$EXCLUDE"
