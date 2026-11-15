@@ -1,0 +1,43 @@
+name: Java gate
+description: Maven verify with Error Prone, SpotBugs and JaCoCo, then the coverage ratchet.
+inputs:
+  modules:
+    description: One line per Maven project, "<part> <directory>".
+    default: java .
+runs:
+  using: composite
+  steps:
+    - uses: ./.gates/actions/python-pin
+
+    # .java-version is the only source of the version (Q15).
+    - name: Java version
+      id: java
+      shell: bash
+      run: |
+        test -f .java-version || { echo "::error::no .java-version: the JDK must be pinned (Q15)"; exit 1; }
+        echo "version=$(tr -d '[:space:]' < .java-version)" >> "$GITHUB_OUTPUT"
+
+    - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+      with:
+        distribution: temurin
+        java-version: ${{ steps.java.outputs.version }}
+        cache: maven
+
+    - name: Error Prone, SpotBugs, tests, coverage ratchet
+      shell: bash
+      env:
+        MODULES: ${{ inputs.modules }}
+      run: |
+        test -f coverage-floors.toml || { echo "::error::no coverage-floors.toml at the repository root (Q4)"; exit 1; }
+        mkdir -p coverage
+        set --
+        while read -r part dir; do
+          [ -z "$part" ] && continue
+          echo "::group::$part ($dir)"
+          python3 .gates/scripts/config_check.py --stack java --dir "$dir" --configs .gates/configs
+          (cd "$dir" && mvn --batch-mode --no-transfer-progress verify)
+          python3 .gates/scripts/to_lcov.py jacoco "$dir/target/site/jacoco/jacoco.xml" > "coverage/$part.lcov"
+          set -- "$@" --part "$part"
+          echo "::endgroup::"
+        done <<< "$MODULES"
+        python3 .gates/scripts/coverage_ratchet.py --floors coverage-floors.toml --check "$@"

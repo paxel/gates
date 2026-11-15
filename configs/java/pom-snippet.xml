@@ -1,0 +1,51 @@
+<!--
+  The strict Java build of the standard (Q14): Error Prone as a compiler plugin with warnings
+  failing the build, SpotBugs failing on any bug, JaCoCo for the coverage ratchet and the
+  toolchains plugin reading .java-version (Q15). A repository's pom.xml carries these parts.
+-->
+<build>
+  <plugins>
+    <plugin>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-compiler-plugin</artifactId>
+      <configuration>
+        <compilerArgs>
+          <arg>-Werror</arg>
+          <arg>-Xlint:all</arg>
+          <arg>-XDcompilePolicy=simple</arg>
+          <arg>--should-stop=ifError=FLOW</arg>
+          <arg>-Xplugin:ErrorProne</arg>
+        </compilerArgs>
+        <annotationProcessorPaths>
+          <path>
+            <groupId>com.google.errorprone</groupId>
+            <artifactId>error_prone_core</artifactId>
+            <version>${errorprone.version}</version>
+          </path>
+        </annotationProcessorPaths>
+      </configuration>
+    </plugin>
+    <plugin>
+      <groupId>com.github.spotbugs</groupId>
+      <artifactId>spotbugs-maven-plugin</artifactId>
+      <configuration>
+        <effort>Max</effort>
+        <threshold>Low</threshold>
+        <failOnError>true</failOnError>
+      </configuration>
+      <executions>
+        <execution>
+          <goals><goal>check</goal></goals>
+        </execution>
+      </executions>
+    </plugin>
+    <plugin>
+      <groupId>org.jacoco</groupId>
+      <artifactId>jacoco-maven-plugin</artifactId>
+      <executions>
+        <execution><goals><goal>prepare-agent</goal></goals></execution>
+        <execution><id>report</id><phase>verify</phase><goals><goal>report</goal></goals></execution>
+      </executions>
+    </plugin>
+  </plugins>
+</build>

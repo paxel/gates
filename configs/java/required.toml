@@ -1,0 +1,4 @@
+[[require]]
+files = ["pom.xml"]
+patterns = ['error_prone_core', '-Xplugin:ErrorProne', '<arg>-Werror</arg>', 'spotbugs-maven-plugin', 'jacoco-maven-plugin']
+why = "Error Prone and SpotBugs with warnings failing the build, JaCoCo (Q14), configs/java/pom-snippet.xml"
