@@ -57,16 +57,12 @@ def unmaintained(vuln: dict[str, Any]) -> bool:
     if not affected:
         return False
     return all(
-        (entry.get("database_specific") or {}).get("informational") == "unmaintained"
-        for entry in affected
+        (entry.get("database_specific") or {}).get("informational") == "unmaintained" for entry in affected
     )
 
 
 def scanned_sources(results: dict[str, Any]) -> set[str]:
-    return {
-        str((r.get("source") or {}).get("path", ""))
-        for r in results.get("results") or []
-    }
+    return {str((r.get("source") or {}).get("path", "")) for r in results.get("results") or []}
 
 
 def result_findings(results: dict[str, Any], strict: bool) -> list[Finding]:
@@ -75,20 +71,20 @@ def result_findings(results: dict[str, Any], strict: bool) -> list[Finding]:
         source = (result.get("source") or {}).get("path", "?")
         for package in result.get("packages") or []:
             info = package.get("package") or {}
-            name = f'{info.get("name") or "?"} {info.get("version") or "?"}'
+            name = f"{info.get('name') or '?'} {info.get('version') or '?'}"
             for vuln in package.get("vulnerabilities") or []:
                 notice = unmaintained(vuln)
                 rows.append(
                     Finding(
                         strict or not notice,
                         "UNMAINTAINED" if notice else "VULNERABILITY",
-                        f'{vuln.get("id", "?")} {name} in {source}: {vuln.get("summary", "")}',
+                        f"{vuln.get('id', '?')} {name} in {source}: {vuln.get('summary', '')}",
                     )
                 )
             violations = package.get("license_violations") or []
             if violations:
                 rows.append(
-                    Finding(True, "LICENCE", f'{name} in {source}: {", ".join(map(str, violations))}')
+                    Finding(True, "LICENCE", f"{name} in {source}: {', '.join(map(str, violations))}")
                 )
     return rows
 
@@ -109,9 +105,9 @@ def config_findings(root: pathlib.Path, today: datetime.date) -> list[Finding]:
         rel = path.relative_to(root)
         config = load_toml(path)
         for entry in config.get("IgnoredVulns") or []:
-            rows += entry_findings(rel, f'IgnoredVulns {entry.get("id", "?")}', entry, "ignoreUntil", today)
+            rows += entry_findings(rel, f"IgnoredVulns {entry.get('id', '?')}", entry, "ignoreUntil", today)
         for entry in config.get("PackageOverrides") or []:
-            label = f'PackageOverrides {entry.get("name", "?")} {entry.get("ecosystem", "")}'.strip()
+            label = f"PackageOverrides {entry.get('name', '?')} {entry.get('ecosystem', '')}".strip()
             rows += entry_findings(rel, label, entry, "effectiveUntil", today)
     return rows
 
@@ -136,13 +132,11 @@ def entry_findings(
     elif until < today:
         problems.append(f"{date_key} {until} has passed")
     if problems:
-        return [Finding(True, "BAD ENTRY", f'{rel}: {label}: {", ".join(problems)}')]
+        return [Finding(True, "BAD ENTRY", f"{rel}: {label}: {', '.join(problems)}")]
     return [Finding(False, "accepted", f"{rel}: {label} until {until}")]
 
 
-def lockfile_findings(
-    root: pathlib.Path, standard: dict[str, Any], sources: set[str]
-) -> list[Finding]:
+def lockfile_findings(root: pathlib.Path, standard: dict[str, Any], sources: set[str]) -> list[Finding]:
     """A manifest whose lockfile (beside it or in a parent, for workspaces) was not read."""
     rows: list[Finding] = []
     scanned = {pathlib.Path(s).resolve() for s in sources if s}
@@ -167,7 +161,7 @@ def lockfile_findings(
                     Finding(
                         True,
                         "NOT SCANNED",
-                        f'{rel}: no {" or ".join(lockfiles)} was read by osv-scanner ({stack["id"]})',
+                        f"{rel}: no {' or '.join(lockfiles)} was read by osv-scanner ({stack['id']})",
                     )
                 )
     return rows
@@ -201,7 +195,7 @@ def main(argv: Sequence[str], today: datetime.date | None = None) -> int:
         return 2
     blocking = sum(1 for r in rows if r.blocks)
     for row in rows:
-        print(f'{row.kind if row.blocks else row.kind + " (reported only)"}: {row.text}')
+        print(f"{row.kind if row.blocks else row.kind + ' (reported only)'}: {row.text}")
     print(f"{len(rows)} findings, {blocking} of them blocking")
     return 1 if blocking else 0
 

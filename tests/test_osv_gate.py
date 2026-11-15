@@ -37,7 +37,15 @@ class OsvGateTest(unittest.TestCase):
         out = StringIO()
         with redirect_stdout(out):
             code = main(
-                ["--results", str(path), "--root", str(self.root), "--standard", str(ROOT / "standard.toml"), *extra],
+                [
+                    "--results",
+                    str(path),
+                    "--root",
+                    str(self.root),
+                    "--standard",
+                    str(ROOT / "standard.toml"),
+                    *extra,
+                ],
                 today=TODAY,
             )
         return code, out.getvalue()
@@ -108,7 +116,8 @@ class OsvGateTest(unittest.TestCase):
 
     def test_a_complete_entry_is_accepted(self) -> None:
         (self.root / "osv-scanner.toml").write_text(
-            '[[PackageOverrides]]\nname = "w"\nlicense.ignore = true\neffectiveUntil = 2027-05-14\nreason = "r"\n'
+            '[[PackageOverrides]]\nname = "w"\nlicense.ignore = true\n'
+            'effectiveUntil = 2027-05-14\nreason = "r"\n'
         )
         code, out = self.gate(self.results([self.pkg()]))
         self.assertEqual(code, 0)
