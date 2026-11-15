@@ -62,7 +62,9 @@ runs:
       env:
         FEATURES: ${{ inputs.features }}
       # shellcheck disable=SC2086
-      run: cargo clippy --locked --lib --bins --examples $FEATURES -- -D warnings
+      # Cargo's default targets, the library and the binaries: what ships. A crate without a
+      # library or without a binary needs no flag for the part it lacks.
+      run: cargo clippy --locked $FEATURES -- -D warnings
 
     # Tests may unwrap, index and panic: that is how they fail. The rest of the set stays.
     - name: Clippy on tests
@@ -72,7 +74,7 @@ runs:
         FEATURES: ${{ inputs.features }}
       # shellcheck disable=SC2086
       run: >-
-        cargo clippy --locked --tests --benches $FEATURES -- -D warnings
+        cargo clippy --locked --tests --benches --examples $FEATURES -- -D warnings
         -A clippy::unwrap_used -A clippy::expect_used -A clippy::panic -A clippy::indexing_slicing
         -A clippy::string_slice -A clippy::arithmetic_side_effects -A clippy::unreachable
 
