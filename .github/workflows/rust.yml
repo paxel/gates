@@ -1,0 +1,89 @@
+name: Rust
+
+# Shared workflow: the Rust gate for a caller's workspace on Linux, plus a clippy-only build
+# on every other system it ships to. Callers pin it:
+#   uses: paxel/gates/.github/workflows/rust.yml@<sha> # vX.Y.Z
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        type: string
+        default: .
+      apt-packages:
+        description: Extra Debian packages the build needs (space separated).
+        type: string
+        default: ""
+      test-wrapper:
+        description: A command the tests run under, e.g. "xvfb-run -a".
+        type: string
+        default: ""
+      features:
+        type: string
+        default: --all-features
+      coverage:
+        description: One line per measured part, "<name> <cargo tarpaulin args>"; see actions/rust.
+        type: string
+        default: rust --workspace
+      also-on:
+        description: JSON list of further runners that build and run clippy, e.g. '["windows-latest","macos-latest"]'.
+        type: string
+        default: "[]"
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    name: fmt, lint set, clippy, test, coverage
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .gates
+          persist-credentials: false
+      - uses: ./.gates/actions/rust
+        with:
+          working-directory: ${{ inputs.working-directory }}
+          apt-packages: ${{ inputs.apt-packages }}
+          test-wrapper: ${{ inputs.test-wrapper }}
+          features: ${{ inputs.features }}
+          coverage: ${{ inputs.coverage }}
+      - name: Keep the coverage for SonarQube Cloud
+        if: inputs.coverage != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-rust
+          path: coverage/
+          if-no-files-found: error
+
+  compile:
+    name: compile (${{ matrix.os }})
+    if: inputs.also-on != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(inputs.also-on) }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Toolchain from rust-toolchain.toml
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: ${{ inputs.working-directory }}
+      - name: Clippy
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          FEATURES: ${{ inputs.features }}
+        # shellcheck disable=SC2086
+        run: cargo clippy --locked --all-targets $FEATURES -- -D warnings

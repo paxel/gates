@@ -1,0 +1,29 @@
+# The Rust lint set of the standard (Q13), wipTracker's set. Every crate carries it in its
+# Cargo.toml: a single crate as [lints.rust] and [lints.clippy], a workspace as
+# [workspace.lints.rust] and [workspace.lints.clippy] with `[lints] workspace = true` in every
+# member. scripts/rust_lints.py checks it; rust.yml runs clippy with it.
+#
+# Shipped code may not panic: no unwrap, expect or panic, no unreachable, no indexing or
+# slicing that can go out of bounds, no arithmetic that can overflow, no dbg!. No #[allow]:
+# a lint that must be silenced says so with #[expect(<lint>, reason = "...")], which fails
+# once the lint no longer fires. unsafe only through #[expect(unsafe_code, reason = ...)]
+# with a // SAFETY: comment at the block; "forbid" where a crate has none at all.
+#
+# Tests (unit tests, tests/, benches/) are exempt: rust.yml lints them with these clippy
+# lints allowed on the command line.
+
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+unreachable = "deny"
+indexing_slicing = "deny"
+string_slice = "deny"
+arithmetic_side_effects = "deny"
+dbg_macro = "deny"
+allow_attributes = "deny"
