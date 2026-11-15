@@ -1,0 +1,38 @@
+name: Go
+
+# Shared workflow: the Go gate. Callers pin it:
+#   uses: paxel/gates/.github/workflows/go.yml@<sha> # vX.Y.Z
+on:
+  workflow_call:
+    inputs:
+      modules:
+        description: One line per module, "<part> <directory>".
+        type: string
+        default: go .
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    name: gofmt, golangci-lint, test, coverage
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .gates
+          persist-credentials: false
+      - uses: ./.gates/actions/go
+        with:
+          modules: ${{ inputs.modules }}
+      - name: Keep the coverage for SonarQube Cloud
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-go
+          path: coverage/
+          if-no-files-found: error

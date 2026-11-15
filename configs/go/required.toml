@@ -1,0 +1,9 @@
+[[require]]
+files = [".golangci.yml", ".golangci.yaml"]
+patterns = ['version:\s*"2"', '-\s*gosec', '-\s*errcheck', '-\s*revive', '-\s*gofmt']
+why = "golangci-lint with gosec, errcheck and revive (Q14), configs/go/.golangci.yml"
+
+[[require]]
+files = ["go.mod"]
+patterns = ['(?m)^toolchain go\d+\.\d+\.\d+']
+why = "the Go toolchain is pinned in go.mod (Q15)"
