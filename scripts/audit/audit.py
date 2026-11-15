@@ -22,6 +22,7 @@ import subprocess  # noqa: S404 - runs gh and git, the audit's only tools
 import sys
 import tempfile
 import tomllib
+import urllib.request
 from collections.abc import Sequence
 from typing import Any
 
@@ -99,6 +100,39 @@ def latest_release(owner: str) -> tuple[str | None, str | None]:
     tag = str(rel["tag_name"])
     commit = gh("api", f"repos/{owner}/gates/commits/{tag}")
     return (str(commit["sha"]) if isinstance(commit, dict) and "sha" in commit else None), tag
+
+
+def fetch(url: str) -> str:
+    with urllib.request.urlopen(url, timeout=30) as response:  # noqa: S310 - fixed https URLs
+        return str(response.read().decode("utf-8"))
+
+
+def latest_toolchains() -> dict[str, str]:
+    """The latest stable Rust, Go, Flutter and Node LTS; a source that fails is left out."""
+    found: dict[str, str] = {}
+    try:
+        channel = tomllib.loads(fetch("https://static.rust-lang.org/dist/channel-rust-stable.toml"))
+        found["rust"] = str(channel["pkg"]["rust"]["version"]).split(" ")[0]
+    except (OSError, ValueError, KeyError):
+        pass
+    try:
+        found["go"] = str(json.loads(fetch("https://go.dev/dl/?mode=json"))[0]["version"]).removeprefix("go")
+    except (OSError, ValueError, KeyError, IndexError):
+        pass
+    try:
+        releases = json.loads(
+            fetch("https://storage.googleapis.com/flutter_infra_release/releases/releases_linux.json")
+        )
+        stable = releases["current_release"]["stable"]
+        found["dart"] = next(str(r["version"]) for r in releases["releases"] if r["hash"] == stable)
+    except (OSError, ValueError, KeyError, StopIteration):
+        pass
+    try:
+        lts = [r for r in json.loads(fetch("https://nodejs.org/dist/index.json")) if r.get("lts")]
+        found["ts"] = str(lts[0]["version"]).lstrip("v")
+    except (OSError, ValueError, KeyError, IndexError):
+        pass
+    return found
 
 
 def audit_repo(
@@ -191,7 +225,7 @@ def main(argv: Sequence[str]) -> int:
         now = datetime.datetime.now(datetime.UTC)
         repos = active(owner, now.year)
         sha, tag = latest_release(owner)
-        ctx = checks.Context(gates=GATES, latest_sha=sha, latest_tag=tag)
+        ctx = checks.Context(gates=GATES, latest_sha=sha, latest_tag=tag, toolchains=latest_toolchains())
         entries = []
         with tempfile.TemporaryDirectory() as tmp:
             for meta in sorted(repos, key=lambda r: str(r["name"]).lower()):

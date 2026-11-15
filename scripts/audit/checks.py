@@ -103,6 +103,9 @@ class Context:
     gates: pathlib.Path
     latest_sha: str | None
     latest_tag: str | None
+    # The latest stable toolchains by stack, e.g. {"rust": "1.99.1"}; a stack without an
+    # entry is not checked.
+    toolchains: dict[str, str] = field(default_factory=dict)
 
 
 def k_ruleset(repo: Repo, d: dict[str, Any], s: dict[str, Any], c: Context) -> tuple[bool, str]:
@@ -214,6 +217,43 @@ def k_pins(repo: Repo, d: dict[str, Any], s: dict[str, Any], c: Context) -> tupl
         if not ok:
             missing.append(f"{stack['id']}: {pin}")
     return (not missing), ("missing " + ", ".join(missing)) if missing else ""
+
+
+def pinned_versions(repo: Repo) -> dict[str, str]:
+    found: dict[str, str] = {}
+    if "rust" in repo.stacks:
+        for p in walk(repo.root, "rust-toolchain.toml"):
+            m = re.search(r'channel\s*=\s*"([^"]+)"', p.read_text(errors="replace"))
+            if m:
+                found["rust"] = m.group(1)
+    if "go" in repo.stacks:
+        for p in walk(repo.root, "go.mod"):
+            m = re.search(r"(?m)^toolchain go(\S+)", p.read_text(errors="replace"))
+            if m:
+                found["go"] = m.group(1)
+    if "dart" in repo.stacks and (repo.root / ".fvmrc").is_file():
+        m = re.search(r'"flutter"\s*:\s*"([^"]+)"', (repo.root / ".fvmrc").read_text(errors="replace"))
+        if m:
+            found["dart"] = m.group(1)
+    if "ts" in repo.stacks and (repo.root / ".nvmrc").is_file():
+        found["ts"] = (repo.root / ".nvmrc").read_text().strip().lstrip("v")
+    return found
+
+
+def k_pins_current(repo: Repo, d: dict[str, Any], s: dict[str, Any], c: Context) -> tuple[bool, str]:
+    behind = []
+    for stack, have in sorted(pinned_versions(repo).items()):
+        latest = c.toolchains.get(stack)
+        if latest is None:
+            continue
+        # Node pins name a major or a full version; either must be the latest one.
+        if stack == "ts" and "." not in have:
+            ok = latest.split(".")[0] == have
+        else:
+            ok = have == latest
+        if not ok:
+            behind.append(f"{stack} {have} < {latest}")
+    return (not behind), ", ".join(behind)
 
 
 def k_uses(repo: Repo, d: dict[str, Any], s: dict[str, Any], c: Context) -> tuple[bool, str]:
@@ -359,6 +399,7 @@ KINDS: dict[str, Check] = {
     "accepted": k_accepted,
     "pins": k_pins,
     "uses": k_uses,
+    "pins-current": k_pins_current,
     "template": k_template,
     "pinned": k_pinned,
     "permissions": k_permissions,

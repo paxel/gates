@@ -240,6 +240,13 @@ applies = "code"
 detect = { kind = "pins" }
 
 [[checks]]
+id = "toolchain-current"
+group = "Dependencies"
+label = "Toolchain pins are the latest stable release (Rust, Go, Flutter, Node)"
+applies = "code"
+detect = { kind = "pins-current" }
+
+[[checks]]
 id = "ci"
 group = "Workflows"
 label = "CI calls the stack workflows and vulns.yml"

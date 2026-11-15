@@ -162,6 +162,18 @@ class AuditChecksTest(unittest.TestCase):
         self.write({"README.md": badges + "![crates.io](https://img.shields.io/crates/v/x)\n"})
         self.assertEqual(self.results(self.repo())["badges"].state, "present")
 
+    def test_an_old_toolchain_pin_is_drift(self) -> None:
+        self.write(
+            {
+                "Cargo.toml": "[package]\nname='x'\n",
+                "rust-toolchain.toml": '[toolchain]\nchannel = "1.98.0"\n',
+            }
+        )
+        ctx = checks.Context(gates=ROOT, latest_sha=SHA, latest_tag="v1.0.0", toolchains={"rust": "1.99.1"})
+        res = {r.check: r for r in checks.run(self.repo(), STANDARD, ctx)}["toolchain-current"]
+        self.assertEqual(res.state, "drift")
+        self.assertIn("rust 1.98.0 < 1.99.1", res.detail)
+
     def test_settings_and_branch(self) -> None:
         on = {
             "secret_scanning": "enabled",
