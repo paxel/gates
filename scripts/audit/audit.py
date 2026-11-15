@@ -244,6 +244,11 @@ def main(argv: Sequence[str]) -> int:
     (out / "audit.json").write_text(json.dumps(data, indent=1) + "\n", encoding="utf-8")
     (out / "index.html").write_text(report.render(data, standard), encoding="utf-8")
     drifting = [e["repo"] for e in entries if any(r["state"] == "drift" for r in e["results"])]
+    if not entries:
+        # Early in January no repository has a commit of the new year yet; an audit of nothing
+        # must not pass.
+        print("audit: no active repository found; nothing was audited", file=sys.stderr)
+        return 1
     if args.issues:
         for entry in entries:
             sync_issue(owner, entry, standard)
