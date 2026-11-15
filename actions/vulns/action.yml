@@ -50,7 +50,9 @@ runs:
         GATES_DIR: .gates
         ROOT: ${{ inputs.root }}
         STRICT: ${{ inputs.strict }}
+        EXCLUDE: ${{ inputs.exclude }}
       run: |
         set -- --results osv-results.json --root "$ROOT" --standard "$GATES_DIR/standard.toml"
         [ "$STRICT" = "true" ] && set -- "$@" --strict
+        while IFS= read -r dir; do [ -n "$dir" ] && set -- "$@" --exclude "$dir"; done <<< "$EXCLUDE"
         python3 "$GATES_DIR/scripts/osv_gate.py" "$@"
