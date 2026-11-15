@@ -74,6 +74,14 @@ class OsvGateTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("LICENCE: paste 1.0.15", out)
 
+    def test_the_repos_own_package_has_no_licence_to_check(self) -> None:
+        own = {
+            "package": {"name": "x", "version": "0.1.0"},
+            "licenses": ["UNKNOWN"],
+            "license_violations": ["UNKNOWN"],
+        }
+        self.assertEqual(self.gate(self.results([own]))[0], 0)
+
     def test_a_manifest_without_a_scanned_lockfile_blocks(self) -> None:
         sub = self.root / "android"
         sub.mkdir()
@@ -139,6 +147,7 @@ class OsvGateTest(unittest.TestCase):
             self.assertEqual(main(["--allowlist", str(ROOT / "standard.toml")]), 0)
         self.assertIn("MIT,MIT-0,0BSD,Apache-2.0", out.getvalue())
         self.assertIn("MPL-2.0", out.getvalue())
+        self.assertNotIn("WITH", out.getvalue())
 
     def test_unreadable_results_are_exit_2(self) -> None:
         code = main(["--results", str(self.root / "missing.json"), "--standard", str(ROOT / "standard.toml")])

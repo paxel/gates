@@ -47,8 +47,14 @@ def load_toml(path: pathlib.Path) -> dict[str, Any]:
 
 
 def allowlist(standard: dict[str, Any]) -> list[str]:
-    allow = standard.get("licences", {}).get("allow", [])
-    return [str(x) for x in allow]
+    """The allowlist as osv-scanner takes it: bare SPDX identifiers only. An exception such as
+    "Apache-2.0 WITH LLVM-exception" only adds permissions, so it is covered by its licence."""
+    allow: list[str] = []
+    for entry in standard.get("licences", {}).get("allow", []):
+        bare = str(entry).split(" WITH ")[0].strip()
+        if bare not in allow:
+            allow.append(bare)
+    return allow
 
 
 def unmaintained(vuln: dict[str, Any]) -> bool:
@@ -65,7 +71,32 @@ def scanned_sources(results: dict[str, Any]) -> set[str]:
     return {str((r.get("source") or {}).get("path", "")) for r in results.get("results") or []}
 
 
-def result_findings(results: dict[str, Any], strict: bool) -> list[Finding]:
+def own_packages(root: pathlib.Path) -> set[str]:
+    """Names of the repository's own packages; deps.dev knows no licence for them."""
+    names: set[str] = set()
+    for path in walk(root):
+        try:
+            if path.name in ("Cargo.toml", "pyproject.toml"):
+                data = load_toml(path)
+                for table in ("package", "project"):
+                    name = (data.get(table) or {}).get("name")
+                    if name:
+                        names.add(str(name))
+            elif path.name == "package.json":
+                name = json.loads(path.read_text(encoding="utf-8")).get("name")
+                if name:
+                    names.add(str(name))
+            elif path.name == "pubspec.yaml":
+                for line in path.read_text(encoding="utf-8").splitlines():
+                    if line.startswith("name:"):
+                        names.add(line.split(":", 1)[1].strip())
+                        break
+        except (OSError, ValueError):
+            continue
+    return names
+
+
+def result_findings(results: dict[str, Any], strict: bool, own: set[str] | None = None) -> list[Finding]:
     rows: list[Finding] = []
     for result in results.get("results") or []:
         source = (result.get("source") or {}).get("path", "?")
@@ -82,7 +113,7 @@ def result_findings(results: dict[str, Any], strict: bool) -> list[Finding]:
                     )
                 )
             violations = package.get("license_violations") or []
-            if violations:
+            if violations and info.get("name") not in (own or set()):
                 rows.append(
                     Finding(True, "LICENCE", f"{name} in {source}: {', '.join(map(str, violations))}")
                 )
@@ -198,7 +229,7 @@ def main(argv: Sequence[str], today: datetime.date | None = None) -> int:
             results = json.load(f)
         root = pathlib.Path(args.root).resolve()
         day = today or datetime.date.today()
-        rows = result_findings(results, args.strict)
+        rows = result_findings(results, args.strict, own_packages(root))
         rows += config_findings(root, day)
         rows += lockfile_findings(root, standard, scanned_sources(results))
     except (OSError, ValueError) as error:
