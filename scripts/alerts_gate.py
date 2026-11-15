@@ -62,6 +62,12 @@ def secret_key(alert: dict[str, Any]) -> Key:
     return ("secret-scanning", str(alert.get("secret_type")))
 
 
+def entry_key(section: str, entry: dict[str, Any]) -> Key:
+    if section == "IgnoredSecrets":
+        return ("secret-scanning", str(entry.get("secret_type")))
+    return (str(entry.get("tool")), str(entry.get("rule")))
+
+
 def describe_code(alert: dict[str, Any]) -> str:
     rule = alert.get("rule") or {}
     severity = rule.get("security_severity_level") or rule.get("severity") or "?"
@@ -84,12 +90,9 @@ def gate(
     lines: list[str] = []
     blocking = 0
     entries: dict[Key, dict[str, Any]] = {}
-    for section, make in (
-        ("IgnoredAlerts", lambda e: (str(e.get("tool")), str(e.get("rule")))),
-        ("IgnoredSecrets", lambda e: ("secret-scanning", str(e.get("secret_type")))),
-    ):
+    for section in ("IgnoredAlerts", "IgnoredSecrets"):
         for entry in ignores.get(section) or []:
-            key = make(entry)
+            key = entry_key(section, entry)
             bad = problems(entry, today)
             if bad:
                 lines.append(f"BAD ENTRY: {section} {key[0]} {key[1]}: {', '.join(bad)}")
@@ -110,7 +113,9 @@ def gate(
     for key in entries:
         if key not in seen:
             lines.append(f"no open alert, the entry can go: {key[0]} {key[1]}")
-    lines.append(f"{len(code)} code-scanning and {len(secrets)} secret-scanning alerts open, {blocking} blocking")
+    lines.append(
+        f"{len(code)} code-scanning and {len(secrets)} secret-scanning alerts open, {blocking} blocking"
+    )
     return lines, blocking
 
 

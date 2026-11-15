@@ -43,8 +43,14 @@ class AlertsGateTest(unittest.TestCase):
             out = StringIO()
             with redirect_stdout(out):
                 result = main(
-                    ["--code", str(t / "code.jsonl"), "--secrets", str(t / "secrets.jsonl"),
-                     "--ignores", str(t / "ignores.toml")],
+                    [
+                        "--code",
+                        str(t / "code.jsonl"),
+                        "--secrets",
+                        str(t / "secrets.jsonl"),
+                        "--ignores",
+                        str(t / "ignores.toml"),
+                    ],
                     today=TODAY,
                 )
             return result, out.getvalue()
@@ -80,7 +86,9 @@ class AlertsGateTest(unittest.TestCase):
         self.assertEqual(self.run_gate([], [secret("test_token", "s1")], ignores)[0], 0)
 
     def test_a_passed_date_blocks(self) -> None:
-        code, out = self.run_gate([alert("Scorecard", "CodeReviewID", "u1")], ignores=ACCEPT.replace("2027-05-14", "2026-11-14"))
+        code, out = self.run_gate(
+            [alert("Scorecard", "CodeReviewID", "u1")], ignores=ACCEPT.replace("2027-05-14", "2026-11-14")
+        )
         self.assertEqual(code, 1)
         self.assertIn("ignoreUntil 2026-11-14 has passed", out)
 
