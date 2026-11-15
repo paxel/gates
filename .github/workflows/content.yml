@@ -9,8 +9,12 @@ on:
         description: formulas, scoop, skills or site.
         type: string
         required: true
+      root:
+        description: The repository's root, relative to the workspace.
+        type: string
+        default: .
       paths:
-        description: The directories to check, one per line (formulas ignores it).
+        description: The directories to check below root, one per line (formulas ignores it).
         type: string
         default: ""
       tap:
@@ -35,35 +39,9 @@ jobs:
           ref: ${{ job.workflow_sha }}
           path: .gates
           persist-credentials: false
-      - uses: ./.gates/actions/python-pin
-
-      - name: Unknown kind
-        if: ${{ !contains(fromJSON('["formulas","scoop","skills","site"]'), inputs.kind) }}
-        run: |
-          echo "::error::kind must be formulas, scoop, skills or site"
-          exit 1
-
-      - name: ${{ inputs.kind }} hold what they must
-        if: inputs.kind != 'formulas'
-        env:
-          KIND: ${{ inputs.kind }}
-          PATHS: ${{ inputs.paths }}
-        run: |
-          set --
-          while IFS= read -r dir; do [ -n "$dir" ] && set -- "$@" "$dir"; done <<< "$PATHS"
-          [ "$#" -gt 0 ] || { echo "::error::no paths to check"; exit 1; }
-          python3 .gates/scripts/content_check.py "$KIND" "$@"
-
-      - name: Homebrew
-        if: inputs.kind == 'formulas'
-        uses: Homebrew/actions/setup-homebrew@ceec4e8419bb3c97ce96e9dda7738499ed5f869d # 2026.11.14.1
-
-      - name: brew style and brew audit
-        if: inputs.kind == 'formulas'
-        env:
-          TAP: ${{ inputs.tap }}
-        run: |
-          [ -n "$TAP" ] || { echo "::error::formulas need the tap input"; exit 1; }
-          brew tap --custom-remote "$TAP" "$GITHUB_WORKSPACE"
-          brew style --display-cop-names "$TAP"
-          brew audit --strict --tap="$TAP"
+      - uses: ./.gates/actions/content
+        with:
+          kind: ${{ inputs.kind }}
+          root: ${{ inputs.root }}
+          paths: ${{ inputs.paths }}
+          tap: ${{ inputs.tap }}
