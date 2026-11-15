@@ -1,0 +1,351 @@
+# The standard every active paxel repository is held to. The audit (scripts/audit/) reads
+# this file; the decisions behind it are in docs/adr/0001-one-standard.md. A check applies to
+# a repository when the repository has something for it to look at; a check that applies is
+# either present or drift.
+#
+# applies:  "all"      every active repository
+#           "code"     every repository with at least one stack
+#           "content"  every repository with a content kind instead of a stack
+#           "<stack>"  repositories with that stack (rust, dart, go, ts, python, java)
+#           "release"  repositories that publish releases (code repositories)
+# detect:   how the audit sees it; see scripts/audit/checks.py for each kind.
+
+version = "1.0.0"
+default_branch = "summer"
+
+[active]
+# A repository is active when it is neither a fork nor archived and has a commit since
+# January 1st of the current year.
+owner = "paxel"
+since = "year-start"
+
+# Licences a dependency may carry (G6). An exception per package goes into the repository's
+# osv-scanner.toml as [[PackageOverrides]] with reason and effectiveUntil (G7).
+[licences]
+allow = [
+  "MIT", "MIT-0", "0BSD", "Apache-2.0", "Apache-2.0 WITH LLVM-exception", "BSD-2-Clause",
+  "BSD-3-Clause", "ISC", "Zlib", "BSL-1.0", "Unicode-3.0", "CC0-1.0", "Unlicense",
+  "bzip2-1.0.6", "MPL-2.0", "OFL-1.1", "Ubuntu-font-1.0",
+]
+
+# Stacks: found by their manifest; each has one toolchain pin file (Q15) and one shared
+# workflow. A manifest without one of its lockfiles fails the OSV gate.
+[[stacks]]
+id = "rust"
+manifests = ["Cargo.toml"]
+lockfiles = ["Cargo.lock"]
+pin = "rust-toolchain.toml"
+workflow = "rust.yml"
+
+[[stacks]]
+id = "dart"
+manifests = ["pubspec.yaml"]
+lockfiles = ["pubspec.lock"]
+pin = ".fvmrc"
+workflow = "dart.yml"
+
+[[stacks]]
+id = "go"
+manifests = ["go.mod"]
+lockfiles = ["go.sum"]
+pin = "go.mod"
+workflow = "go.yml"
+
+[[stacks]]
+id = "ts"
+manifests = ["package.json"]
+lockfiles = ["package-lock.json"]
+pin = ".nvmrc"
+workflow = "ts.yml"
+
+[[stacks]]
+id = "python"
+manifests = ["pyproject.toml"]
+lockfiles = ["uv.lock"]
+pin = ".python-version"
+workflow = "python.yml"
+
+[[stacks]]
+id = "java"
+manifests = ["pom.xml", "build.gradle.kts", "build.gradle"]
+lockfiles = ["pom.xml", "gradle.lockfile", "gradle/verification-metadata.xml"]
+pin = ".java-version"
+workflow = "java.yml"
+
+# Repositories without app code hold one of these instead (Q10).
+[[contents]]
+id = "formulas"
+detect = ["Formula", "Casks"]
+
+[[contents]]
+id = "scoop"
+detect = ["bucket"]
+
+[[contents]]
+id = "skills"
+detect = ["skills"]
+
+[[contents]]
+id = "site"
+detect = ["index.html"]
+
+# The fixed badge row, in this order (Q9). Rust repositories add panic-free and unsafe after
+# License. Distribution badges may follow; nothing else.
+[badges]
+row = ["CI", "Security", "CodeQL", "Scorecard", "Sonar quality gate", "Coverage", "Fuzz", "Release", "License"]
+rust = ["panic-free", "unsafe"]
+content_row = ["CI", "Security", "CodeQL", "Scorecard", "License"]
+distribution = [
+  "crates.io", "docs.rs", "npm", "PyPI", "Maven Central", "pkg.go.dev", "F-Droid", "Homebrew",
+  "Scoop", "platforms", "docs",
+]
+
+# Scorecard findings that cannot be fixed by a single maintainer; every repository accepts
+# them in code-scanning-ignores.toml with this reason.
+[[accepted]]
+tool = "Scorecard"
+rule = "CodeReviewID"
+reason = "Single maintainer: GitHub forbids approving one's own pull request."
+
+[[accepted]]
+tool = "Scorecard"
+rule = "CIIBestPracticesID"
+reason = "Single maintainer: the OpenSSF Best Practices badge is a self-certification questionnaire; the practices it asks for are checked by the gates."
+
+[[accepted]]
+tool = "Scorecard"
+rule = "BranchProtectionID"
+reason = "Single maintainer: the ruleset blocks deletion and force-pushes and requires a pull request with green CI, but no approval, since nobody else can give one."
+
+# --- Checks -------------------------------------------------------------------------------
+
+[[checks]]
+id = "ruleset"
+group = "GitHub settings"
+label = "Ruleset on the default branch: no deletion, no force-push, pull request, required checks, 0 approvals"
+applies = "all"
+detect = { kind = "ruleset" }
+
+[[checks]]
+id = "secret-scanning"
+group = "GitHub settings"
+label = "Secret scanning and push protection"
+applies = "all"
+detect = { kind = "setting", keys = ["secret_scanning", "push_protection"] }
+
+[[checks]]
+id = "dependabot-alerts"
+group = "GitHub settings"
+label = "Dependabot alerts"
+applies = "all"
+detect = { kind = "setting", keys = ["vulnerability_alerts"] }
+
+[[checks]]
+id = "dependabot-security-updates"
+group = "GitHub settings"
+label = "Dependabot security updates"
+applies = "all"
+detect = { kind = "setting", keys = ["automated_security_fixes"] }
+
+[[checks]]
+id = "private-vulnerability-reporting"
+group = "GitHub settings"
+label = "Private vulnerability reporting"
+applies = "all"
+detect = { kind = "setting", keys = ["private_vulnerability_reporting"] }
+
+[[checks]]
+id = "default-branch"
+group = "GitHub settings"
+label = "Default branch is summer"
+applies = "all"
+detect = { kind = "default-branch" }
+
+[[checks]]
+id = "licence"
+group = "Files"
+label = "LICENSE"
+applies = "all"
+detect = { kind = "any-file", paths = ["LICENSE", "LICENSE.md", "LICENSE-MIT"] }
+
+[[checks]]
+id = "security-md"
+group = "Files"
+label = "SECURITY.md"
+applies = "all"
+detect = { kind = "file", path = "SECURITY.md" }
+
+[[checks]]
+id = "changelog"
+group = "Files"
+label = "CHANGELOG.md and OLDER_CHANGES.md"
+applies = "code"
+detect = { kind = "files", paths = ["CHANGELOG.md", "OLDER_CHANGES.md"] }
+
+[[checks]]
+id = "agents-md"
+group = "Files"
+label = "AGENTS.md, and CLAUDE.md holding only @AGENTS.md"
+applies = "all"
+detect = { kind = "agents" }
+
+[[checks]]
+id = "domain-docs"
+group = "Files"
+label = "CONTEXT.md and docs/adr/"
+applies = "all"
+detect = { kind = "files", paths = ["CONTEXT.md", "docs/adr"] }
+
+[[checks]]
+id = "agent-docs"
+group = "Files"
+label = "docs/agents/issue-tracker.md, triage-labels.md, ticket-ids.md"
+applies = "all"
+detect = { kind = "files", paths = ["docs/agents/issue-tracker.md", "docs/agents/triage-labels.md", "docs/agents/ticket-ids.md"] }
+
+[[checks]]
+id = "dependabot"
+group = "Dependencies"
+label = "Dependabot covers github-actions and every stack"
+applies = "all"
+detect = { kind = "dependabot" }
+
+[[checks]]
+id = "no-renovate"
+group = "Dependencies"
+label = "No Renovate"
+applies = "all"
+detect = { kind = "no-file", paths = ["renovate.json", ".github/renovate.json", ".renovaterc", ".renovaterc.json"] }
+
+[[checks]]
+id = "osv-scanner-toml"
+group = "Dependencies"
+label = "osv-scanner.toml (accepted advisories and licence exceptions)"
+applies = "code"
+detect = { kind = "file", path = "osv-scanner.toml" }
+
+[[checks]]
+id = "code-scanning-ignores"
+group = "Dependencies"
+label = "code-scanning-ignores.toml with the accepted Scorecard findings"
+applies = "all"
+detect = { kind = "accepted" }
+
+[[checks]]
+id = "toolchain-pin"
+group = "Dependencies"
+label = "Toolchain pinned in the stack's pin file"
+applies = "code"
+detect = { kind = "pins" }
+
+[[checks]]
+id = "ci"
+group = "Workflows"
+label = "CI calls the stack workflows and vulns.yml"
+applies = "code"
+detect = { kind = "uses", file = "ci.yml", workflows = ["vulns.yml", "{stack}"] }
+
+[[checks]]
+id = "content-ci"
+group = "Workflows"
+label = "CI calls content.yml"
+applies = "content"
+detect = { kind = "uses", file = "ci.yml", workflows = ["content.yml"] }
+
+[[checks]]
+id = "security"
+group = "Workflows"
+label = "Weekly Security calls release-gate.yml and vulns.yml"
+applies = "all"
+detect = { kind = "uses", file = "security.yml", workflows = ["release-gate.yml", "vulns.yml"], schedule = true }
+
+[[checks]]
+id = "codeql"
+group = "Workflows"
+label = "CodeQL"
+applies = "all"
+detect = { kind = "uses", file = "codeql.yml", workflows = ["codeql.yml"] }
+
+[[checks]]
+id = "scorecard"
+group = "Workflows"
+label = "Scorecard, the same as templates/scorecard.yml"
+applies = "all"
+detect = { kind = "template", file = ".github/workflows/scorecard.yml", template = "templates/scorecard.yml" }
+
+[[checks]]
+id = "sonar"
+group = "Workflows"
+label = "SonarQube Cloud"
+applies = "code"
+detect = { kind = "uses", file = "ci.yml", workflows = ["sonar.yml"] }
+
+[[checks]]
+id = "fuzz"
+group = "Workflows"
+label = "Fuzzing"
+applies = "code"
+detect = { kind = "uses", file = "fuzz.yml", workflows = ["fuzz.yml"], schedule = true }
+
+[[checks]]
+id = "pinned"
+group = "Workflows"
+label = "Every action pinned to a full SHA with its version in a comment"
+applies = "all"
+detect = { kind = "pinned" }
+
+[[checks]]
+id = "permissions"
+group = "Workflows"
+label = "Every workflow starts with permissions: contents: read"
+applies = "all"
+detect = { kind = "permissions" }
+
+[[checks]]
+id = "gates-current"
+group = "Workflows"
+label = "Shared workflows pinned to the latest gates release"
+applies = "all"
+detect = { kind = "gates-version" }
+
+[[checks]]
+id = "release-gate"
+group = "Release"
+label = "Release calls release-gate.yml before it builds"
+applies = "release"
+detect = { kind = "uses", file = "release.yml", workflows = ["release-gate.yml"] }
+
+[[checks]]
+id = "provenance"
+group = "Release"
+label = "Release calls provenance.yml"
+applies = "release"
+detect = { kind = "uses", file = "release.yml", workflows = ["provenance.yml"] }
+
+[[checks]]
+id = "coverage-floors"
+group = "Quality"
+label = "coverage-floors.toml with a floor per measured part"
+applies = "code"
+detect = { kind = "file", path = "coverage-floors.toml" }
+
+[[checks]]
+id = "lint-config"
+group = "Quality"
+label = "The stack's strict lint config from configs/"
+applies = "code"
+detect = { kind = "lint-config" }
+
+[[checks]]
+id = "rust-lints"
+group = "Rust"
+label = "Every crate's [lints] holds the Rust lint set"
+applies = "rust"
+detect = { kind = "rust-lints" }
+
+[[checks]]
+id = "badges"
+group = "README"
+label = "The fixed badge row, in order, and nothing but distribution badges after it"
+applies = "all"
+detect = { kind = "badges" }
