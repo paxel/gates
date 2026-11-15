@@ -136,10 +136,21 @@ def entry_findings(
     return [Finding(False, "accepted", f"{rel}: {label} until {until}")]
 
 
+# osv-scanner-action runs in a container with the workspace mounted here; its paths are
+# mapped back onto the runner's workspace before they are compared.
+CONTAINER_WORKSPACE = "/github/workspace/"
+
+
+def normal(source: str) -> pathlib.Path:
+    if source.startswith(CONTAINER_WORKSPACE):
+        source = source[len(CONTAINER_WORKSPACE) :]
+    return pathlib.Path(source).resolve()
+
+
 def lockfile_findings(root: pathlib.Path, standard: dict[str, Any], sources: set[str]) -> list[Finding]:
     """A manifest whose lockfile (beside it or in a parent, for workspaces) was not read."""
     rows: list[Finding] = []
-    scanned = {pathlib.Path(s).resolve() for s in sources if s}
+    scanned = {normal(s) for s in sources if s}
     for stack in standard.get("stacks") or []:
         manifests = set(stack.get("manifests") or [])
         lockfiles = list(stack.get("lockfiles") or [])

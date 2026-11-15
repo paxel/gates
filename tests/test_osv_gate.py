@@ -1,5 +1,6 @@
 import datetime
 import json
+import os
 import pathlib
 import tempfile
 import unittest
@@ -86,6 +87,15 @@ class OsvGateTest(unittest.TestCase):
         member.mkdir(parents=True)
         (member / "Cargo.toml").write_text("")
         self.assertEqual(self.gate(self.results([self.pkg()]))[0], 0)
+
+    def test_container_paths_map_onto_the_workspace(self) -> None:
+        cwd = os.getcwd()
+        os.chdir(self.root)
+        try:
+            data = {"results": [{"source": {"path": "/github/workspace/Cargo.lock"}, "packages": []}]}
+            self.assertEqual(self.gate(data)[0], 0)
+        finally:
+            os.chdir(cwd)
 
     def test_nothing_scanned_blocks(self) -> None:
         code, out = self.gate({"results": []})
