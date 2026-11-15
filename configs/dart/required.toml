@@ -1,0 +1,10 @@
+[[require]]
+files = ["analysis_options.yaml"]
+patterns = [
+  'include:\s*package:(lints/recommended|flutter_lints/flutter)\.yaml',
+  'strict-casts:\s*true',
+  'strict-inference:\s*true',
+  'strict-raw-types:\s*true',
+]
+why = "strict Dart analysis (Q14), configs/dart/analysis_options.yaml"
+

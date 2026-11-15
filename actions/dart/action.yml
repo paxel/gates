@@ -1,0 +1,62 @@
+name: Dart gate
+description: format, strict analyze with infos failing, tests and the coverage ratchet for Dart and Flutter packages.
+inputs:
+  packages:
+    description: >-
+      One line per package: its part name in coverage-floors.toml, then its directory,
+      e.g. "flutter-app ." and "dart-core packages/core".
+    default: dart .
+  apt-packages:
+    description: Extra Debian packages the tests need (space separated).
+    default: ""
+  test-wrapper:
+    description: A command the tests run under, e.g. "xvfb-run -a".
+    default: ""
+runs:
+  using: composite
+  steps:
+    - uses: ./.gates/actions/python-pin
+
+    # .fvmrc is the only source of the Flutter version (Q15).
+    - name: Flutter from .fvmrc
+      shell: bash
+      run: |
+        test -f .fvmrc || { echo "::error::no .fvmrc: the Flutter version must be pinned (Q15)"; exit 1; }
+        version=$(python3 -c 'import json; print(json.load(open(".fvmrc"))["flutter"])')
+        git clone --quiet --depth 1 --branch "$version" https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+        echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+        "$RUNNER_TEMP/flutter/bin/flutter" --version
+
+    - name: Extra system packages
+      if: inputs.apt-packages != ''
+      shell: bash
+      env:
+        PACKAGES: ${{ inputs.apt-packages }}
+      run: |
+        sudo apt-get update
+        # shellcheck disable=SC2086
+        sudo apt-get install -y --no-install-recommends $PACKAGES
+
+    - name: Format, strict analysis, tests, coverage ratchet
+      shell: bash
+      env:
+        PACKAGES: ${{ inputs.packages }}
+        WRAPPER: ${{ inputs.test-wrapper }}
+      run: |
+        test -f coverage-floors.toml || { echo "::error::no coverage-floors.toml at the repository root (Q4)"; exit 1; }
+        mkdir -p coverage
+        set --
+        while read -r part dir; do
+          [ -z "$part" ] && continue
+          echo "::group::$part ($dir)"
+          python3 .gates/scripts/config_check.py --stack dart --dir "$dir" --configs .gates/configs
+          (cd "$dir" && flutter pub get --enforce-lockfile)
+          dart format --output=none --set-exit-if-changed "$dir"
+          (cd "$dir" && flutter analyze --fatal-infos --fatal-warnings)
+          # shellcheck disable=SC2086
+          (cd "$dir" && $WRAPPER flutter test --coverage)
+          cp "$dir/coverage/lcov.info" "coverage/$part.lcov"
+          set -- "$@" --part "$part"
+          echo "::endgroup::"
+        done <<< "$PACKAGES"
+        python3 .gates/scripts/coverage_ratchet.py --floors coverage-floors.toml --check "$@"
