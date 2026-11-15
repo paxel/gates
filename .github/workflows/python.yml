@@ -1,0 +1,38 @@
+name: Python
+
+# Shared workflow: the Python gate. Callers pin it:
+#   uses: paxel/gates/.github/workflows/python.yml@<sha> # vX.Y.Z
+on:
+  workflow_call:
+    inputs:
+      packages:
+        description: One line per project, "<part> <directory>"; see actions/python.
+        type: string
+        default: python .
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: ruff, mypy, test, coverage
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .gates
+          persist-credentials: false
+      - uses: ./.gates/actions/python
+        with:
+          packages: ${{ inputs.packages }}
+      - name: Keep the coverage for SonarQube Cloud
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-python
+          path: coverage/
+          if-no-files-found: error

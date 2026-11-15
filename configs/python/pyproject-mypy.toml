@@ -1,0 +1,5 @@
+# The mypy part of the standard's Python config (Q14); a repository puts it into its
+# pyproject.toml.
+[tool.mypy]
+strict = true
+python_version = "3.12"

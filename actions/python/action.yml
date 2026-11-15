@@ -1,0 +1,37 @@
+name: Python gate
+description: ruff format and check with the strict config, mypy --strict, tests with coverage and the ratchet for uv projects.
+inputs:
+  packages:
+    description: One line per project, "<part> <directory>"; each has a pyproject.toml and a uv.lock.
+    default: python .
+runs:
+  using: composite
+  steps:
+    - uses: ./.gates/actions/python-pin
+
+    # .python-version is the only source of the version (Q15); uv installs it.
+    - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+    - name: ruff, mypy, tests, coverage ratchet
+      shell: bash
+      env:
+        PACKAGES: ${{ inputs.packages }}
+      run: |
+        test -f coverage-floors.toml || { echo "::error::no coverage-floors.toml at the repository root (Q4)"; exit 1; }
+        mkdir -p coverage
+        set --
+        while read -r part dir; do
+          [ -z "$part" ] && continue
+          echo "::group::$part ($dir)"
+          test -f "$dir/.python-version" || test -f .python-version || { echo "::error::no .python-version (Q15)"; exit 1; }
+          python3 .gates/scripts/config_check.py --stack python --dir "$dir" --configs .gates/configs
+          (cd "$dir" && uv sync --locked --all-extras --dev)
+          (cd "$dir" && uv run ruff format --check .)
+          (cd "$dir" && uv run ruff check .)
+          (cd "$dir" && uv run mypy .)
+          (cd "$dir" && uv run pytest --cov --cov-report=lcov:coverage.lcov)
+          cp "$dir/coverage.lcov" "coverage/$part.lcov"
+          set -- "$@" --part "$part"
+          echo "::endgroup::"
+        done <<< "$PACKAGES"
+        python3 .gates/scripts/coverage_ratchet.py --floors coverage-floors.toml --check "$@"

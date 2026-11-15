@@ -1,0 +1,9 @@
+[[require]]
+files = ["ruff.toml", ".ruff.toml"]
+patterns = ['select\s*=\s*\[[^\]]*"B"', 'select\s*=\s*\[[^\]]*"S"', 'select\s*=\s*\[[^\]]*"UP"|extend\s*=.*configs/python/ruff\.toml']
+why = "ruff with bugbear, security and pyupgrade (Q14), configs/python/ruff.toml"
+
+[[require]]
+files = ["pyproject.toml", "mypy.ini"]
+patterns = ['(?m)^strict\s*=\s*true']
+why = "mypy --strict (Q14), configs/python/pyproject-mypy.toml"
