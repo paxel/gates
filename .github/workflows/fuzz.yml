@@ -1,0 +1,153 @@
+name: Fuzz
+
+# Shared workflow: the caller's fuzz targets, each for a fixed time, on a schedule. Callers
+# pin it from their own fuzz.yml (schedule plus workflow_dispatch):
+#   uses: paxel/gates/.github/workflows/fuzz.yml@<sha> # vX.Y.Z
+#   with: { stack: rust, targets: "parse_clock\nstore_load" }
+#
+# targets, one per line:
+#   rust    cargo-fuzz target names in fuzz/
+#   go      "<package dir> <FuzzFunc>"
+#   python  Atheris scripts (run with uv)
+#   ts      Jazzer.js target files
+#   java    JUnit @FuzzTest classes (Jazzer through Maven)
+on:
+  workflow_call:
+    inputs:
+      stack:
+        type: string
+        required: true
+      targets:
+        type: string
+        required: true
+      seconds:
+        description: Time per target.
+        type: number
+        default: 300
+      apt-packages:
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  targets:
+    name: Targets
+    runs-on: ubuntu-24.04
+    outputs:
+      list: ${{ steps.list.outputs.list }}
+    steps:
+      - id: list
+        env:
+          TARGETS: ${{ inputs.targets }}
+        run: |
+          list=$(python3 -c 'import json, os; print(json.dumps([t.strip() for t in os.environ["TARGETS"].splitlines() if t.strip()]))')
+          [ "$list" != "[]" ] || { echo "::error::no fuzz target: a fuzz run must not pass with nothing fuzzed"; exit 1; }
+          echo "list=$list" >> "$GITHUB_OUTPUT"
+
+  fuzz:
+    name: fuzz ${{ matrix.target }}
+    needs: targets
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(needs.targets.outputs.list) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Extra system packages
+        if: inputs.apt-packages != ''
+        env:
+          PACKAGES: ${{ inputs.apt-packages }}
+        run: |
+          sudo apt-get update
+          # shellcheck disable=SC2086
+          sudo apt-get install -y --no-install-recommends $PACKAGES
+
+      # Rust: the pinned stable toolchain with RUSTC_BOOTSTRAP for -Z sanitizer, so fuzzing
+      # builds with the same compiler as everything else.
+      - name: cargo-fuzz
+        if: inputs.stack == 'rust'
+        env:
+          RUSTC_BOOTSTRAP: "1"
+          TARGET: ${{ matrix.target }}
+          SECONDS_EACH: ${{ inputs.seconds }}
+        run: |
+          rustup toolchain install
+          cargo install cargo-fuzz --locked --version 0.13.2
+          cargo fuzz run "$TARGET" -- -max_total_time="$SECONDS_EACH"
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        if: inputs.stack == 'go'
+        with:
+          go-version-file: go.mod
+      - name: go test -fuzz
+        if: inputs.stack == 'go'
+        env:
+          TARGET: ${{ matrix.target }}
+          SECONDS_EACH: ${{ inputs.seconds }}
+        run: |
+          read -r dir func <<< "$TARGET"
+          (cd "$dir" && go test -run='^$' -fuzz="^${func}\$" -fuzztime="${SECONDS_EACH}s" .)
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        if: inputs.stack == 'python'
+      - name: Atheris
+        if: inputs.stack == 'python'
+        env:
+          TARGET: ${{ matrix.target }}
+          SECONDS_EACH: ${{ inputs.seconds }}
+        run: |
+          uv sync --locked --all-extras --dev
+          uv run python "$TARGET" -max_total_time="$SECONDS_EACH"
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: inputs.stack == 'ts'
+        with:
+          node-version-file: .nvmrc
+      - name: Jazzer.js
+        if: inputs.stack == 'ts'
+        env:
+          TARGET: ${{ matrix.target }}
+          SECONDS_EACH: ${{ inputs.seconds }}
+        run: |
+          npm ci --ignore-scripts
+          npx --no-install jazzer "$TARGET" -- -max_total_time="$SECONDS_EACH"
+
+      - name: Java version
+        if: inputs.stack == 'java'
+        id: java
+        run: echo "version=$(tr -d '[:space:]' < .java-version)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        if: inputs.stack == 'java'
+        with:
+          distribution: temurin
+          java-version: ${{ steps.java.outputs.version }}
+          cache: maven
+      - name: Jazzer
+        if: inputs.stack == 'java'
+        env:
+          TARGET: ${{ matrix.target }}
+          SECONDS_EACH: ${{ inputs.seconds }}
+          JAZZER_FUZZ: "1"
+        run: mvn --batch-mode --no-transfer-progress test -Dtest="$TARGET" -Djazzer.max_duration="${SECONDS_EACH}s"
+
+      - name: Unknown stack
+        if: ${{ !contains(fromJSON('["rust","go","python","ts","java"]'), inputs.stack) }}
+        run: |
+          echo "::error::stack must be rust, go, python, ts or java"
+          exit 1
+
+      - name: Keep the crash
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fuzz-${{ strategy.job-index }}
+          path: |
+            fuzz/artifacts/
+            **/testdata/fuzz/
+            crash-*
+          if-no-files-found: ignore
