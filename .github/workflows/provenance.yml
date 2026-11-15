@@ -1,0 +1,86 @@
+name: Provenance
+
+# Shared workflow: a CycloneDX source SBOM, a build provenance attestation for every release
+# file and the attestation's Sigstore bundle as a file of its own (Q7). It takes the
+# caller's built files from artifacts and hands everything back as one artifact,
+# `release-files`, which the caller's publishing job attaches to the GitHub release. Callers
+# pin it:
+#   uses: paxel/gates/.github/workflows/provenance.yml@<sha> # vX.Y.Z
+#   permissions: { contents: read, id-token: write, attestations: write }
+#   with: { name: wiptracker, tag: v1.3.1, artifacts: "dist-*" }
+# Registry packages (Q8) are built files like any other: the caller uploads the .crate, jar,
+# npm tarball or wheel as an artifact too. npm --provenance and PyPI attestations are added by
+# the caller's publish step, which the registries require to run in the publishing job.
+on:
+  workflow_call:
+    inputs:
+      name:
+        description: The project's file name prefix, e.g. wiptracker.
+        type: string
+        required: true
+      tag:
+        description: The release tag, e.g. v1.3.1.
+        type: string
+        required: true
+      artifacts:
+        description: Pattern of the artifacts that hold the release files.
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  provenance:
+    name: SBOM, attestation, Sigstore bundle
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Before the built files land in the workspace, so the SBOM covers the source tree:
+      # the lockfiles, which is what the files contain.
+      - name: Source SBOM (CycloneDX)
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: ${{ inputs.name }}-${{ inputs.tag }}-source.cdx.json
+          upload-artifact: false
+          upload-release-assets: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: ${{ inputs.artifacts }}
+          path: dist
+          merge-multiple: true
+      - name: Something to attest
+        env:
+          NAME: ${{ inputs.name }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          [ -n "$(ls -A dist 2>/dev/null)" ] || { echo "::error::no release files in the artifacts; nothing would be attested"; exit 1; }
+          mv "$NAME-$TAG-source.cdx.json" dist/
+      # Signed provenance per file: `gh attestation verify <file> -R <owner/repo>`.
+      - name: Build provenance attestations
+        id: attest
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/*
+      # The same provenance as a release file, for checks without the GitHub API
+      # (`gh attestation verify <file> -R <owner/repo> --bundle <this file>`) and for
+      # Scorecard's Signed-Releases. Copied after the attestation, so it is no subject of itself.
+      - name: Sigstore bundle next to the files
+        env:
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+          NAME: ${{ inputs.name }}
+          TAG: ${{ inputs.tag }}
+        run: cp "$BUNDLE" "dist/$NAME-$TAG-provenance.sigstore.json"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-files
+          path: dist/
+          if-no-files-found: error
