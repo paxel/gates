@@ -1,0 +1,23 @@
+name: Security
+
+# Weekly, and by hand: gates' own release gate without a version, strict, as every repository
+# runs it (templates/workflows/security.yml).
+on:
+  schedule:
+    - cron: "23 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    uses: ./.github/workflows/release-gate.yml
+    permissions:
+      contents: read
+      security-events: read
+    with:
+      strict: true
+      osv-exclude: fixtures
+    secrets:
+      alerts-token: ${{ secrets.GATES_ALERTS_TOKEN }}

@@ -8,3 +8,9 @@ fixtures/**/node_modules/
 fixtures/**/.dart_tool/
 fixtures/**/build/
 fixtures/**/coverage/
+# Coverage output of the local runs and CI; the floors and badges are committed.
+coverage/
+*.lcov
+.coverage
+.venv/
+.pytest_cache/

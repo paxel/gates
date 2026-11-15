@@ -1,0 +1,38 @@
+[project]
+name = "gates"
+version = "1.0.0"
+description = "Shared security and quality gates for paxel's repositories"
+requires-python = ">=3.12"
+license = "MIT"
+# The scripts use the standard library only; these are the tools that check them.
+dependencies = []
+
+[dependency-groups]
+dev = [
+  "ruff==0.14.5",
+  "mypy==1.18.2",
+  "pytest==9.2.0",
+  "pytest-cov==7.0.0",
+  "atheris==3.1.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.mypy]
+strict = true
+python_version = "3.12"
+files = ["scripts", "tests", "fuzz"]
+mypy_path = ["scripts", "scripts/audit"]
+exclude = ["^fixtures/"]
+
+[[tool.mypy.overrides]]
+module = ["atheris"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["scripts", "scripts/audit"]
+
+[tool.coverage.run]
+source = ["scripts"]

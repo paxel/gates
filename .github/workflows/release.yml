@@ -1,0 +1,89 @@
+name: Release
+
+# gates' release: the gate first, then the source tarball callers' pins point at, then its
+# provenance, then the GitHub release with the CHANGELOG section as notes (G4).
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - id: v
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+  gate:
+    needs: version
+    uses: ./.github/workflows/release-gate.yml
+    permissions:
+      contents: read
+      security-events: read
+    with:
+      version: ${{ needs.version.outputs.version }}
+      osv-exclude: fixtures
+    secrets:
+      alerts-token: ${{ secrets.GATES_ALERTS_TOKEN }}
+
+  build:
+    needs: gate
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Source tarball
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          mkdir -p dist
+          git archive --format=tar.gz --prefix="gates-$TAG/" -o "dist/gates-$TAG.tar.gz" HEAD
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dist-source
+          path: dist/
+
+  provenance:
+    needs: build
+    uses: ./.github/workflows/provenance.yml
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    with:
+      name: gates
+      tag: ${{ github.ref_name }}
+      artifacts: dist-*
+
+  publish:
+    needs: [version, provenance]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-files
+          path: dist
+      - name: Release notes from the CHANGELOG section
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          awk -v ver="$VERSION" '
+            $0 ~ "^## \\[" ver "\\]" { grab = 1; next }
+            grab && (/^## \[/ || /^---/) { exit }
+            grab { print }
+          ' CHANGELOG.md > notes.md
+          [ -s notes.md ] || { echo "::error::CHANGELOG.md has no section for $VERSION"; exit 1; }
+      - uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
+        with:
+          body_path: notes.md
+          files: dist/*

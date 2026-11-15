@@ -11,7 +11,11 @@ name: Fuzz
 #   python  Atheris scripts (run with uv)
 #   ts      Jazzer.js target files
 #   java    JUnit @FuzzTest classes (Jazzer through Maven)
+# The same file is gates' own weekly fuzz run on its Atheris targets.
 on:
+  schedule:
+    - cron: "29 5 * * 1"
+  workflow_dispatch:
   workflow_call:
     inputs:
       stack:
@@ -42,6 +46,9 @@ jobs:
         env:
           TARGETS: ${{ inputs.targets }}
         run: |
+          # gates' own run (no inputs) fuzzes its scripts.
+          [ -n "$TARGETS" ] || TARGETS=$(printf '%s\n' fuzz/fuzz_to_lcov.py fuzz/fuzz_ratchet.py)
+          export TARGETS
           list=$(python3 -c 'import json, os; print(json.dumps([t.strip() for t in os.environ["TARGETS"].splitlines() if t.strip()]))')
           [ "$list" != "[]" ] || { echo "::error::no fuzz target: a fuzz run must not pass with nothing fuzzed"; exit 1; }
           echo "list=$list" >> "$GITHUB_OUTPUT"
@@ -74,7 +81,7 @@ jobs:
         env:
           RUSTC_BOOTSTRAP: "1"
           TARGET: ${{ matrix.target }}
-          SECONDS_EACH: ${{ inputs.seconds }}
+          SECONDS_EACH: ${{ inputs.seconds || 300 }}
         run: |
           rustup toolchain install
           cargo install cargo-fuzz --locked --version 0.13.2
@@ -88,18 +95,18 @@ jobs:
         if: inputs.stack == 'go'
         env:
           TARGET: ${{ matrix.target }}
-          SECONDS_EACH: ${{ inputs.seconds }}
+          SECONDS_EACH: ${{ inputs.seconds || 300 }}
         run: |
           read -r dir func <<< "$TARGET"
           (cd "$dir" && go test -run='^$' -fuzz="^${func}\$" -fuzztime="${SECONDS_EACH}s" .)
 
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
-        if: inputs.stack == 'python'
+        if: (inputs.stack || 'python') == 'python'
       - name: Atheris
-        if: inputs.stack == 'python'
+        if: (inputs.stack || 'python') == 'python'
         env:
           TARGET: ${{ matrix.target }}
-          SECONDS_EACH: ${{ inputs.seconds }}
+          SECONDS_EACH: ${{ inputs.seconds || 300 }}
         run: |
           uv sync --locked --all-extras --dev
           uv run python "$TARGET" -max_total_time="$SECONDS_EACH"
@@ -112,7 +119,7 @@ jobs:
         if: inputs.stack == 'ts'
         env:
           TARGET: ${{ matrix.target }}
-          SECONDS_EACH: ${{ inputs.seconds }}
+          SECONDS_EACH: ${{ inputs.seconds || 300 }}
         run: |
           npm ci --ignore-scripts
           npx --no-install jazzer "$TARGET" -- -max_total_time="$SECONDS_EACH"
@@ -131,12 +138,12 @@ jobs:
         if: inputs.stack == 'java'
         env:
           TARGET: ${{ matrix.target }}
-          SECONDS_EACH: ${{ inputs.seconds }}
+          SECONDS_EACH: ${{ inputs.seconds || 300 }}
           JAZZER_FUZZ: "1"
         run: mvn --batch-mode --no-transfer-progress test -Dtest="$TARGET" -Djazzer.max_duration="${SECONDS_EACH}s"
 
       - name: Unknown stack
-        if: ${{ !contains(fromJSON('["rust","go","python","ts","java"]'), inputs.stack) }}
+        if: ${{ !contains(fromJSON('["rust","go","python","ts","java"]'), inputs.stack || 'python') }}
         run: |
           echo "::error::stack must be rust, go, python, ts or java"
           exit 1

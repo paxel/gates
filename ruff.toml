@@ -1,6 +1,8 @@
 # gates' own Python is held to the strict Python config every Python repository uses
 # (configs/python/ruff.toml); this file only adds what is gates-specific.
 extend = "configs/python/ruff.toml"
+# The fixtures are projects of their own, with their own configs and planted findings.
+extend-exclude = ["fixtures"]
 
 [lint.extend-per-file-ignores]
 # The audit runs gh and git by design, with arguments it builds itself.
