@@ -1,0 +1,105 @@
+name: Release gate
+
+# Shared workflow: what a release must pass before anything is built, and what the weekly
+# Security run checks (without a version). Callers pin it:
+#   uses: paxel/gates/.github/workflows/release-gate.yml@<sha> # vX.Y.Z
+#   with: { version: "1.3.1" }       # omitted in the weekly run
+#   secrets: { alerts-token: "${{ secrets.GATES_ALERTS_TOKEN }}" }
+# GITHUB_TOKEN cannot read secret-scanning alerts, so the caller passes a fine-grained token
+# with "Secret scanning alerts: read"; without it the call is invalid and the run fails.
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: The version being released; its CHANGELOG.md section must exist. Empty in the weekly run.
+        type: string
+        default: ""
+      strict:
+        description: Unmaintained notices block too (the weekly run).
+        type: boolean
+        default: false
+      ignores:
+        description: The accepted findings file.
+        type: string
+        default: code-scanning-ignores.toml
+      osv-exclude:
+        description: Directory names left out of the OSV scan, one per line.
+        type: string
+        default: ""
+    secrets:
+      alerts-token:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  alerts:
+    name: No open code-scanning or secret-scanning alert that is not accepted
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .gates
+          persist-credentials: false
+      - uses: ./.gates/actions/python-pin
+      - name: Open alerts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ALERTS_TOKEN: ${{ secrets.alerts-token }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          [ -n "$ALERTS_TOKEN" ] || { echo "::error::no alerts-token: secret-scanning alerts cannot be read, so the gate cannot pass"; exit 1; }
+          # The default branch is what Scorecard, CodeQL and Sonar analyse; a release is cut from it.
+          gh api --paginate "repos/$REPO/code-scanning/alerts?ref=refs/heads/$BRANCH&state=open&per_page=100" \
+            --jq '.[]' > code.jsonl
+          GH_TOKEN="$ALERTS_TOKEN" gh api --paginate "repos/$REPO/secret-scanning/alerts?state=open&per_page=100" \
+            --jq '.[]' > secrets.jsonl
+      - name: Gate
+        env:
+          IGNORES: ${{ inputs.ignores }}
+        run: |
+          test -f "$IGNORES" || { echo "::error::no $IGNORES: every repository accepts its findings there"; exit 1; }
+          python3 .gates/scripts/alerts_gate.py --code code.jsonl --secrets secrets.jsonl --ignores "$IGNORES"
+
+  vulns:
+    name: No known vulnerability, no licence outside the allowlist
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .gates
+          persist-credentials: false
+      - uses: ./.gates/actions/vulns
+        with:
+          strict: ${{ inputs.strict }}
+          exclude: ${{ inputs.osv-exclude }}
+
+  changelog:
+    name: CHANGELOG.md has the version's section
+    if: inputs.version != ''
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Section for the version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          grep -Fq "## [$VERSION]" CHANGELOG.md || { echo "::error::CHANGELOG.md has no section ## [$VERSION]"; exit 1; }
+          echo "CHANGELOG.md has ## [$VERSION]"
