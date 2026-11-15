@@ -26,10 +26,10 @@ def from_go(text: str) -> dict[str, tuple[int, int]]:
         covered = int(count) > 0 or (key in seen and seen[key][1])
         seen[key] = (int(statements), covered)
     files: dict[str, list[int]] = defaultdict(lambda: [0, 0])
-    for (path, _), (statements, covered) in seen.items():
-        files[path][0] += statements
-        if covered:
-            files[path][1] += statements
+    for (path, _), (count_of, hit) in seen.items():
+        files[path][0] += count_of
+        if hit:
+            files[path][1] += count_of
     return {p: (v[0], v[1]) for p, v in files.items()}
 
 
@@ -40,8 +40,8 @@ def from_jacoco(text: str) -> dict[str, tuple[int, int]]:
         for source in package.iter("sourcefile"):
             for counter in source.iter("counter"):
                 if counter.get("type") == "LINE":
-                    missed, covered = int(counter.get("missed", 0)), int(counter.get("covered", 0))
-                    files[f'{package.get("name")}/{source.get("name")}'] = (missed + covered, covered)
+                    missed, covered = int(counter.get("missed", "0")), int(counter.get("covered", "0"))
+                    files[f"{package.get('name')}/{source.get('name')}"] = (missed + covered, covered)
     return files
 
 
