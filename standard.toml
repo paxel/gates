@@ -87,7 +87,7 @@ detect = ["skills"]
 
 [[contents]]
 id = "site"
-detect = ["index.html"]
+detect = ["index.html", "repo/index.html"]
 
 # The fixed badge row, in this order (Q9). Rust repositories add panic-free and unsafe after
 # License. Distribution badges may follow; nothing else.
