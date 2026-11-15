@@ -90,6 +90,13 @@ class OsvGateTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("NOT SCANNED: android/build.gradle.kts", out)
 
+    def test_an_excluded_directory_is_not_asked_for_a_lockfile(self) -> None:
+        sub = self.root / "fixtures" / "go"
+        sub.mkdir(parents=True)
+        (sub / "go.mod").write_text("module x\n")
+        self.assertEqual(self.gate(self.results([self.pkg()]))[0], 1)
+        self.assertEqual(self.gate(self.results([self.pkg()]), "--exclude", "fixtures")[0], 0)
+
     def test_a_workspace_member_uses_the_root_lockfile(self) -> None:
         member = self.root / "crates" / "core"
         member.mkdir(parents=True)

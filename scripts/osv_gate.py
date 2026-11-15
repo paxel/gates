@@ -120,17 +120,18 @@ def result_findings(results: dict[str, Any], strict: bool, own: set[str] | None 
     return rows
 
 
-def walk(root: pathlib.Path) -> Iterable[pathlib.Path]:
+def walk(root: pathlib.Path, exclude: Iterable[str] = ()) -> Iterable[pathlib.Path]:
+    skip = SKIP_DIRS | set(exclude)
     for path in sorted(root.rglob("*")):
         rel = path.relative_to(root)
-        if any(part in SKIP_DIRS for part in rel.parts):
+        if any(part in skip for part in rel.parts):
             continue
         yield path
 
 
-def config_findings(root: pathlib.Path, today: datetime.date) -> list[Finding]:
+def config_findings(root: pathlib.Path, today: datetime.date, exclude: Iterable[str] = ()) -> list[Finding]:
     rows: list[Finding] = []
-    for path in walk(root):
+    for path in walk(root, exclude):
         if path.name != "osv-scanner.toml":
             continue
         rel = path.relative_to(root)
@@ -178,14 +179,16 @@ def normal(source: str) -> pathlib.Path:
     return pathlib.Path(source).resolve()
 
 
-def lockfile_findings(root: pathlib.Path, standard: dict[str, Any], sources: set[str]) -> list[Finding]:
+def lockfile_findings(
+    root: pathlib.Path, standard: dict[str, Any], sources: set[str], exclude: Iterable[str] = ()
+) -> list[Finding]:
     """A manifest whose lockfile (beside it or in a parent, for workspaces) was not read."""
     rows: list[Finding] = []
     scanned = {normal(s) for s in sources if s}
     for stack in standard.get("stacks") or []:
         manifests = set(stack.get("manifests") or [])
         lockfiles = list(stack.get("lockfiles") or [])
-        for path in walk(root):
+        for path in walk(root, exclude):
             if path.name not in manifests:
                 continue
             found = None
@@ -216,6 +219,9 @@ def main(argv: Sequence[str], today: datetime.date | None = None) -> int:
     parser.add_argument("--root", default=".")
     parser.add_argument("--standard")
     parser.add_argument("--strict", action="store_true", help="unmaintained notices block too")
+    parser.add_argument(
+        "--exclude", action="append", default=[], help="a directory name left out of the scan"
+    )
     args = parser.parse_args(argv)
     try:
         if args.allowlist:
@@ -230,8 +236,8 @@ def main(argv: Sequence[str], today: datetime.date | None = None) -> int:
         root = pathlib.Path(args.root).resolve()
         day = today or datetime.date.today()
         rows = result_findings(results, args.strict, own_packages(root))
-        rows += config_findings(root, day)
-        rows += lockfile_findings(root, standard, scanned_sources(results))
+        rows += config_findings(root, day, args.exclude)
+        rows += lockfile_findings(root, standard, scanned_sources(results), args.exclude)
     except (OSError, ValueError) as error:
         print(f"cannot read the results, the standard or a config: {error}", file=sys.stderr)
         return 2
