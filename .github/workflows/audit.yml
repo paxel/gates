@@ -1,0 +1,79 @@
+name: Audit
+
+# Every Monday, and by hand: every active repository against standard.toml (Q16). The report
+# goes to gates' GitHub Pages, every drifting repository gets one issue that this run opens,
+# updates or closes, and the run goes red while any repository drifts.
+#
+# GATES_AUDIT_TOKEN: a fine-grained token on all of the owner's repositories with read access
+# to Administration, Contents, Metadata, Secret scanning alerts, Code scanning alerts and
+# Dependabot alerts, and read and write access to Issues (to open the drift issues).
+on:
+  schedule:
+    - cron: "41 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: Audit every active repository
+    runs-on: ubuntu-24.04
+    outputs:
+      drift: ${{ steps.audit.outputs.drift }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: python3 is the pinned version
+        run: |
+          want=$(tr -d '[:space:]' < .python-version)
+          have=$(python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])')
+          [ "$have" = "$want" ] || { echo "::error::python3 is $have, gates pins $want"; exit 1; }
+      - name: Audit
+        id: audit
+        env:
+          GH_TOKEN: ${{ secrets.GATES_AUDIT_TOKEN }}
+        run: |
+          [ -n "$GH_TOKEN" ] || { echo "::error::no GATES_AUDIT_TOKEN: the settings cannot be read, so the audit cannot pass"; exit 1; }
+          set +e
+          python3 scripts/audit/audit.py --out site --issues
+          code=$?
+          set -e
+          [ "$code" -le 1 ] || exit "$code"
+          echo "drift=$code" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+  pages:
+    name: Publish the report
+    needs: audit
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+  verdict:
+    name: No repository drifts
+    needs: [audit, pages]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Drift fails the run
+        env:
+          DRIFT: ${{ needs.audit.outputs.drift }}
+        run: |
+          if [ "$DRIFT" != "0" ]; then
+            echo "::error::at least one repository drifts from the standard; see the report and the drift issues"
+            exit 1
+          fi

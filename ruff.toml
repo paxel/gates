@@ -1,3 +1,9 @@
 # gates' own Python is held to the strict Python config every Python repository uses
 # (configs/python/ruff.toml); this file only adds what is gates-specific.
 extend = "configs/python/ruff.toml"
+
+[lint.extend-per-file-ignores]
+# The audit runs gh and git by design, with arguments it builds itself.
+"scripts/audit/audit.py" = ["S603", "S607"]
+# The report is one HTML page with its CSS; long lines are markup, not logic.
+"scripts/audit/report.py" = ["E501"]
