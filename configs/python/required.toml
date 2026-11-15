@@ -1,6 +1,7 @@
 [[require]]
 files = ["ruff.toml", ".ruff.toml"]
-patterns = ['select\s*=\s*\[[^\]]*"B"', 'select\s*=\s*\[[^\]]*"S"', 'select\s*=\s*\[[^\]]*"UP"|extend\s*=.*configs/python/ruff\.toml']
+# Either the shared config is extended, or bugbear, security and pyupgrade are all selected.
+patterns = ['extend\s*=.*configs/python/ruff\.toml|select\s*=\s*\[(?=[^\]]*"B")(?=[^\]]*"S")(?=[^\]]*"UP")']
 why = "ruff with bugbear, security and pyupgrade (Q14), configs/python/ruff.toml"
 
 [[require]]
