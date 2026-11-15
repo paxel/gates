@@ -19,6 +19,6 @@ which stays private until a release with the fix is out.
 ## What is already checked
 
 gates is held to its own standard: CodeQL, OpenSSF Scorecard, SonarQube Cloud, the OSV gate,
-the alert gate, the coverage ratchet and the self-test of every gate on green and red
-fixtures. Every release carries a build provenance attestation, its Sigstore bundle and an
-SBOM.
+the alert gate, the coverage ratchet and a self-test that runs the OSV, stack, content,
+ratchet and alert gates on clean fixtures (must pass) and planted findings (must fail).
+Every release carries a build provenance attestation, its Sigstore bundle and an SBOM.

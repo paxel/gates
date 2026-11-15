@@ -1,0 +1,5 @@
+# The planted finding: a floor of 100% the measure cannot reach.
+[[parts]]
+name = "red"
+lcov = "red-lcov.txt"
+floor = 100.00

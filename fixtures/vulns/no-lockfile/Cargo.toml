@@ -1,0 +1,9 @@
+[package]
+name = "gates-fixture-unscanned"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+# The planted finding: a manifest without its Cargo.lock, so nothing of it is scanned and
+# the OSV gate must fail instead of passing on nothing.

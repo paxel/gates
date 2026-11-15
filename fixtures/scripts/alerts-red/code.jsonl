@@ -1,0 +1,1 @@
+{"html_url": "https://github.com/paxel/gates/security/code-scanning/0", "tool": {"name": "CodeQL"}, "rule": {"id": "py/planted", "security_severity_level": "high"}, "most_recent_instance": {"location": {"path": "scripts/x.py"}}}

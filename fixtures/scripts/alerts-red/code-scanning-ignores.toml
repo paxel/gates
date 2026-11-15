@@ -1,0 +1,6 @@
+# Accepts a different rule; the planted CodeQL alert stays open, so the gate must fail.
+[[IgnoredAlerts]]
+tool = "CodeQL"
+rule = "py/other"
+ignoreUntil = 2099-01-01
+reason = "fixture"

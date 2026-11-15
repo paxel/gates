@@ -74,7 +74,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        case: [vulns, rust, dart, go, ts, python, java, formulas, scoop, skills, site]
+        case: [vulns, unscanned, rust, dart, go, ts, python, java, formulas, scoop, skills, site, ratchet, alerts]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -90,6 +90,12 @@ jobs:
         uses: ./.gates/actions/vulns
         with:
           root: fixtures/vulns/red
+      - id: unscanned
+        if: matrix.case == 'unscanned'
+        continue-on-error: true
+        uses: ./.gates/actions/vulns
+        with:
+          root: fixtures/vulns/no-lockfile
       - id: rust
         if: matrix.case == 'rust'
         continue-on-error: true
@@ -159,6 +165,19 @@ jobs:
           kind: site
           root: fixtures/content/site/red
           paths: .
+
+      - id: ratchet
+        if: matrix.case == 'ratchet'
+        continue-on-error: true
+        working-directory: fixtures/scripts/ratchet-red
+        run: python3 "$GITHUB_WORKSPACE/.gates/scripts/coverage_ratchet.py" --floors coverage-floors.toml --check
+      - id: alerts
+        if: matrix.case == 'alerts'
+        continue-on-error: true
+        working-directory: fixtures/scripts/alerts-red
+        run: >-
+          python3 "$GITHUB_WORKSPACE/.gates/scripts/alerts_gate.py" --code code.jsonl
+          --secrets secrets.jsonl --ignores code-scanning-ignores.toml
 
       - name: The planted finding failed the gate
         env:
