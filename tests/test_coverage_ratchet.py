@@ -86,6 +86,12 @@ class CoverageRatchetTest(unittest.TestCase):
         (self.root / "gui.lcov").unlink()
         self.assertEqual(self.run_it("--check")[0], 2)
 
+    def test_one_part_is_checked_alone(self) -> None:
+        self.write(80.0, ("src/a.rs", 100, 70))
+        self.assertEqual(self.run_it("--check", "--part", "gui")[0], 0)
+        self.assertEqual(self.run_it("--check", "--part", "core")[0], 1)
+        self.assertEqual(self.run_it("--check", "--part", "nope")[0], 1)
+
     def test_no_parts_fails(self) -> None:
         (self.root / "coverage-floors.toml").write_text("")
         self.assertEqual(self.run_it("--check")[0], 1)

@@ -86,6 +86,7 @@ def main(argv: Sequence[str]) -> int:
     parser.add_argument("--floors", default="coverage-floors.toml")
     parser.add_argument("--badges", default=".github/badges")
     parser.add_argument("--check", action="store_true", help="verify only, never write (CI)")
+    parser.add_argument("--part", action="append", default=[], help="only this part (repeatable)")
     args = parser.parse_args(argv)
     floors_path = pathlib.Path(args.floors)
     root = floors_path.resolve().parent
@@ -95,6 +96,12 @@ def main(argv: Sequence[str]) -> int:
     except (OSError, ValueError) as error:
         print(f"coverage: cannot read {floors_path}: {error}", file=sys.stderr)
         return 2
+    if args.part:
+        unknown = set(args.part) - {str(p.get("name")) for p in parts}
+        if unknown:
+            print(f"coverage: {floors_path} names no part {', '.join(sorted(unknown))}", file=sys.stderr)
+            return 1
+        parts = [p for p in parts if str(p.get("name")) in args.part]
     if not parts:
         print(f"coverage: {floors_path} names no part", file=sys.stderr)
         return 1
