@@ -52,7 +52,7 @@ jobs:
           persist-credentials: false
       - uses: ./.gates/actions/rust
         with:
-          root: src/${{ inputs.root }}
+          root: ${{ inputs.root == '.' && 'src' || format('src/{0}', inputs.root) }}
           apt-packages: ${{ inputs.apt-packages }}
           test-wrapper: ${{ inputs.test-wrapper }}
           features: ${{ inputs.features }}
@@ -62,7 +62,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage-rust
-          path: src/${{ inputs.root }}/coverage/
+          path: ${{ inputs.root == '.' && 'src' || format('src/{0}', inputs.root) }}/coverage/
           if-no-files-found: error
 
   compile:
@@ -89,6 +89,7 @@ jobs:
         working-directory: ${{ inputs.root }}
         env:
           FEATURES: ${{ inputs.features }}
-        # shellcheck disable=SC2086
         # The shipped code, like the Linux job; tests are linted there.
-        run: cargo clippy --locked $FEATURES -- -D warnings
+        run: |
+          # shellcheck disable=SC2086
+          cargo clippy --locked $FEATURES -- -D warnings

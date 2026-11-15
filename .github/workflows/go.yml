@@ -36,11 +36,11 @@ jobs:
           persist-credentials: false
       - uses: ./.gates/actions/go
         with:
-          root: src/${{ inputs.root }}
+          root: ${{ inputs.root == '.' && 'src' || format('src/{0}', inputs.root) }}
           modules: ${{ inputs.modules }}
       - name: Keep the coverage for SonarQube Cloud
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage-go
-          path: src/${{ inputs.root }}/coverage/
+          path: ${{ inputs.root == '.' && 'src' || format('src/{0}', inputs.root) }}/coverage/
           if-no-files-found: error

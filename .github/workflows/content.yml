@@ -45,6 +45,6 @@ jobs:
       - uses: ./.gates/actions/content
         with:
           kind: ${{ inputs.kind }}
-          root: src/${{ inputs.root }}
+          root: ${{ inputs.root == '.' && 'src' || format('src/{0}', inputs.root) }}
           paths: ${{ inputs.paths }}
           tap: ${{ inputs.tap }}
