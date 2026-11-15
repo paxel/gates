@@ -37,6 +37,8 @@ runs:
           python3 .gates/scripts/config_check.py --stack java --dir "$dir" --configs .gates/configs
           (cd "$dir" && mvn --batch-mode --no-transfer-progress verify)
           python3 .gates/scripts/to_lcov.py jacoco "$dir/target/site/jacoco/jacoco.xml" > "coverage/$part.lcov"
+          # SonarQube Cloud reads Java coverage as JaCoCo XML.
+          cp "$dir/target/site/jacoco/jacoco.xml" "coverage/$part.jacoco.xml"
           set -- "$@" --part "$part"
           echo "::endgroup::"
         done <<< "$MODULES"

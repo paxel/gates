@@ -29,8 +29,10 @@ runs:
           (cd "$dir" && uv run ruff format --check .)
           (cd "$dir" && uv run ruff check .)
           (cd "$dir" && uv run mypy .)
-          (cd "$dir" && uv run pytest --cov --cov-report=lcov:coverage.lcov)
+          (cd "$dir" && uv run pytest --cov --cov-report=lcov:coverage.lcov --cov-report=xml:coverage.xml)
           cp "$dir/coverage.lcov" "coverage/$part.lcov"
+          # SonarQube Cloud reads Python coverage as Cobertura XML.
+          cp "$dir/coverage.xml" "coverage/$part.xml"
           set -- "$@" --part "$part"
           echo "::endgroup::"
         done <<< "$PACKAGES"
