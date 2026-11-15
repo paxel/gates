@@ -68,8 +68,10 @@ workflow = "python.yml"
 
 [[stacks]]
 id = "java"
-manifests = ["pom.xml", "build.gradle.kts", "build.gradle"]
-lockfiles = ["pom.xml", "gradle.lockfile", "gradle/verification-metadata.xml"]
+# Maven only: the Android Gradle builds of the Flutter apps are not a Java stack of their own
+# (an open question for the Dart repos' grills), and java.yml runs Maven.
+manifests = ["pom.xml"]
+lockfiles = ["pom.xml"]
 pin = ".java-version"
 workflow = "java.yml"
 

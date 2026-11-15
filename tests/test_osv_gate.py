@@ -83,12 +83,12 @@ class OsvGateTest(unittest.TestCase):
         self.assertEqual(self.gate(self.results([own]))[0], 0)
 
     def test_a_manifest_without_a_scanned_lockfile_blocks(self) -> None:
-        sub = self.root / "android"
+        sub = self.root / "app"
         sub.mkdir()
-        (sub / "build.gradle.kts").write_text("")
+        (sub / "pubspec.yaml").write_text("name: app\n")
         code, out = self.gate(self.results([self.pkg()]))
         self.assertEqual(code, 1)
-        self.assertIn("NOT SCANNED: android/build.gradle.kts", out)
+        self.assertIn("NOT SCANNED: app/pubspec.yaml", out)
 
     def test_an_excluded_directory_is_not_asked_for_a_lockfile(self) -> None:
         sub = self.root / "fixtures" / "go"
