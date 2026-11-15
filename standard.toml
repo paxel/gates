@@ -272,7 +272,7 @@ id = "scorecard"
 group = "Workflows"
 label = "Scorecard, the same as templates/scorecard.yml"
 applies = "all"
-detect = { kind = "template", file = ".github/workflows/scorecard.yml", template = "templates/scorecard.yml" }
+detect = { kind = "template", file = ".github/workflows/scorecard.yml", template = "templates/workflows/scorecard.yml" }
 
 [[checks]]
 id = "sonar"
