@@ -1,0 +1,3 @@
+# gates' own Python is held to the strict Python config every Python repository uses
+# (configs/python/ruff.toml); this file only adds what is gates-specific.
+extend = "configs/python/ruff.toml"

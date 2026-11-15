@@ -1,0 +1,12 @@
+# The strict ruff config of every Python repository of the standard (Q14): pycodestyle,
+# pyflakes, isort, bugbear, the bandit security rules and pyupgrade. A repository extends it
+# with `extend = ".gates-configs/python/ruff.toml"` or copies it; the audit checks the rules.
+line-length = 110
+target-version = "py312"
+
+[lint]
+select = ["E", "F", "W", "I", "B", "S", "UP"]
+
+[lint.per-file-ignores]
+# Tests assert with assert and write temporary files; that is what they are for.
+"tests/**" = ["S101", "S108"]
