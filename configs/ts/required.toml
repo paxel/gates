@@ -1,0 +1,9 @@
+[[require]]
+files = ["eslint.config.mjs", "eslint.config.js", "eslint.config.ts"]
+patterns = ['strictTypeChecked', 'projectService:\s*true']
+why = "typescript-eslint strict-type-checked (Q14), configs/ts/eslint.config.mjs"
+
+[[require]]
+files = ["tsconfig.json"]
+patterns = ['"strict"\s*:\s*true', '"noUncheckedIndexedAccess"\s*:\s*true']
+why = "tsconfig strict (Q14), configs/ts/tsconfig.json"
