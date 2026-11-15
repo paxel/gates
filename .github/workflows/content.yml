@@ -1,0 +1,69 @@
+name: Content
+
+# Shared workflow: the checks for a repository without app code (Q10). Callers pin it:
+#   uses: paxel/gates/.github/workflows/content.yml@<sha> # vX.Y.Z
+on:
+  workflow_call:
+    inputs:
+      kind:
+        description: formulas, scoop, skills or site.
+        type: string
+        required: true
+      paths:
+        description: The directories to check, one per line (formulas ignores it).
+        type: string
+        default: ""
+      tap:
+        description: For formulas, the tap's name, e.g. paxel/tap.
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  content:
+    name: ${{ inputs.kind }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .gates
+          persist-credentials: false
+      - uses: ./.gates/actions/python-pin
+
+      - name: Unknown kind
+        if: ${{ !contains(fromJSON('["formulas","scoop","skills","site"]'), inputs.kind) }}
+        run: |
+          echo "::error::kind must be formulas, scoop, skills or site"
+          exit 1
+
+      - name: ${{ inputs.kind }} hold what they must
+        if: inputs.kind != 'formulas'
+        env:
+          KIND: ${{ inputs.kind }}
+          PATHS: ${{ inputs.paths }}
+        run: |
+          set --
+          while IFS= read -r dir; do [ -n "$dir" ] && set -- "$@" "$dir"; done <<< "$PATHS"
+          [ "$#" -gt 0 ] || { echo "::error::no paths to check"; exit 1; }
+          python3 .gates/scripts/content_check.py "$KIND" "$@"
+
+      - name: Homebrew
+        if: inputs.kind == 'formulas'
+        uses: Homebrew/actions/setup-homebrew@ceec4e8419bb3c97ce96e9dda7738499ed5f869d # 2026.11.14.1
+
+      - name: brew style and brew audit
+        if: inputs.kind == 'formulas'
+        env:
+          TAP: ${{ inputs.tap }}
+        run: |
+          [ -n "$TAP" ] || { echo "::error::formulas need the tap input"; exit 1; }
+          brew tap --custom-remote "$TAP" "$GITHUB_WORKSPACE"
+          brew style --display-cop-names "$TAP"
+          brew audit --strict --tap="$TAP"
