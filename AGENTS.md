@@ -49,7 +49,8 @@ always the ones of the commit the caller pinned, and no tool that walks the call
 - Every repository has every check of the standard, unless it has nothing for that check to
   look at. "We have no time" or "it is red" is not such a reason.
 - A gate that has never been seen red proves nothing: the OSV gate (vulnerability and missing
-  lockfile), the six stack gates, the four content gates, the ratchet and the alert gate each
+  lockfile), the six stack gates, the four content gates, the ratchet and the alert gate (once for an
+  alert, once for a SonarQube Cloud finding) each
   have a fixture with a planted finding, and the self-test fails unless that case fails. CodeQL,
   SonarQube Cloud, fuzzing, provenance, the alert download and the audit have no red fixture
   yet; do not claim more than this list.

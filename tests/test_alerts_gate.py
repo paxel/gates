@@ -22,6 +22,19 @@ def alert(tool: str, rule: str, url: str, severity: str = "high", path: str = NO
     }
 
 
+def issue(rule: str, path: str, key: str = "k1", severity: str = "MAJOR") -> dict[str, Any]:
+    """An issue as SonarQube Cloud's api/issues/search returns it."""
+    component = f"paxel_x:{path}" if path else "paxel_x"
+    found = {"key": key, "rule": rule, "project": "paxel_x", "component": component, "severity": severity}
+    return {**found, "type": "VULNERABILITY", "line": 7, "message": "Path traversal"}
+
+
+def hotspot(rule: str, path: str, key: str = "h1") -> dict[str, Any]:
+    """A hotspot as SonarQube Cloud's api/hotspots/search returns it."""
+    found = {"key": key, "ruleKey": rule, "project": "paxel_x", "component": f"paxel_x:{path}"}
+    return {**found, "vulnerabilityProbability": "MEDIUM", "line": 3, "message": "Review this"}
+
+
 def accept(tool: str, rule: str, path: str = "") -> str:
     where = f'path = "{path}"\n' if path else ""
     head = f'[[IgnoredAlerts]]\ntool = "{tool}"\nrule = "{rule}"\n'
@@ -40,13 +53,21 @@ ACCEPT = (
 
 class AlertsGateTest(unittest.TestCase):
     def run_gate(
-        self, code: list[dict[str, Any]], leaks: list[dict[str, Any]] | None = None, ignores: str = ""
+        self,
+        code: list[dict[str, Any]],
+        leaks: list[dict[str, Any]] | None = None,
+        ignores: str = "",
+        sonar: list[dict[str, Any]] | None = None,
     ) -> tuple[int, str]:
         with tempfile.TemporaryDirectory() as tmp:
             t = pathlib.Path(tmp)
             (t / "code.jsonl").write_text("".join(json.dumps(a) + "\n" for a in code))
             (t / "secrets.jsonl").write_text("".join(json.dumps(a) + "\n" for a in (leaks or [])))
             (t / "ignores.toml").write_text(ignores)
+            extra = []
+            if sonar is not None:
+                (t / "sonar.jsonl").write_text("".join(json.dumps(a) + "\n" for a in sonar))
+                extra = ["--sonar", str(t / "sonar.jsonl")]
             out = StringIO()
             with redirect_stdout(out):
                 result = main(
@@ -57,6 +78,7 @@ class AlertsGateTest(unittest.TestCase):
                         str(t / "secrets.jsonl"),
                         "--ignores",
                         str(t / "ignores.toml"),
+                        *extra,
                     ],
                     today=TODAY,
                 )
@@ -104,6 +126,46 @@ class AlertsGateTest(unittest.TestCase):
     def test_an_entry_with_a_path_does_not_accept_a_finding_without_a_file(self) -> None:
         found = [alert("Scorecard", "CodeReviewID", "u1")]
         self.assertEqual(self.run_gate(found, ignores=accept("Scorecard", "CodeReviewID", "a.py"))[0], 1)
+
+    def test_a_sonar_issue_of_any_severity_blocks(self) -> None:
+        code, out = self.run_gate([], sonar=[issue("python:S1", "scripts/a.py", severity="INFO")])
+        self.assertEqual(code, 1)
+        self.assertIn("OPEN: SonarQube Cloud python:S1 (issue, info) scripts/a.py:7 Path traversal", out)
+        self.assertIn("0 secret-scanning alerts and 1 SonarQube Cloud findings open, 1 blocking", out)
+
+    def test_a_hotspot_to_review_blocks(self) -> None:
+        code, out = self.run_gate([], sonar=[hotspot("python:S4", "scripts/a.py")])
+        self.assertEqual(code, 1)
+        self.assertIn("OPEN: SonarQube Cloud python:S4 (hotspot, medium) scripts/a.py:3", out)
+
+    def test_a_sonar_finding_is_accepted_for_its_rule_and_file(self) -> None:
+        found = [issue("python:S1", "scripts/a.py"), issue("python:S1", "scripts/a.py", "k2")]
+        ignores = accept("SonarQube Cloud", "python:S1", "scripts/a.py")
+        self.assertEqual(self.run_gate([], ignores=ignores, sonar=found)[0], 0)
+        other = [issue("python:S1", "scripts/b.py"), hotspot("python:S4", "scripts/a.py")]
+        code, out = self.run_gate([], ignores=ignores, sonar=other)
+        self.assertEqual(code, 1)
+        self.assertIn("2 blocking", out)
+
+    def test_a_sonar_finding_on_the_project_has_no_file(self) -> None:
+        ignores = accept("SonarQube Cloud", "python:S1")
+        self.assertEqual(self.run_gate([], ignores=ignores, sonar=[issue("python:S1", "")])[0], 0)
+
+    def test_sonar_entries_are_left_alone_without_the_list(self) -> None:
+        ignores = accept("SonarQube Cloud", "python:S1", "scripts/a.py")
+        self.assertNotIn("can go", self.run_gate([], ignores=ignores)[1])
+        self.assertIn(
+            "can go: SonarQube Cloud python:S1 scripts/a.py", self.run_gate([], ignores=ignores, sonar=[])[1]
+        )
+
+    def test_an_unreadable_sonar_list_is_exit_2(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, redirect_stderr(StringIO()):
+            t = pathlib.Path(tmp)
+            for f in ("code.jsonl", "leaks.jsonl", "ignores.toml"):
+                (t / f).write_text("")
+            base = ["--code", str(t / "code.jsonl"), "--secrets", str(t / "leaks.jsonl")]
+            base += ["--ignores", str(t / "ignores.toml")]
+            self.assertEqual(main([*base, "--sonar", str(t / "missing")]), 2)
 
     def test_an_open_secret_blocks(self) -> None:
         code, out = self.run_gate([], [leak("github_personal_access_token", "s1")])

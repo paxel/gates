@@ -1,0 +1,8 @@
+# Accepts the planted rule in another file; the issue in scripts/x.py stays open, so the gate
+# must fail.
+[[IgnoredAlerts]]
+tool = "SonarQube Cloud"
+rule = "python:S0000"
+path = "scripts/y.py"
+ignoreUntil = 2099-01-01
+reason = "fixture"

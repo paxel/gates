@@ -1,0 +1,1 @@
+{"key": "planted", "rule": "python:S0000", "project": "paxel_gates", "component": "paxel_gates:scripts/x.py", "severity": "MAJOR", "type": "VULNERABILITY", "line": 1, "message": "planted"}

@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [1.1.0]
 
+### Added
+
+- The alert gate counts SonarQube Cloud's open issues, of any type and severity, and its
+  security hotspots to review; each blocks unless `code-scanning-ignores.toml` accepts it with
+  tool "SonarQube Cloud", its rule and its file
+  ([gate-1023](https://github.com/paxel/gates/issues/28)).
+
 ### Changed
 
 - An accepted code-scanning alert that is in a file names that file as `path` in

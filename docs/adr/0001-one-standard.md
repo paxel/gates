@@ -39,6 +39,14 @@ is in a file names that file, and the entry covers that file only; an entry with
 for an alert about the repository as a whole. Dependabot alerts do not count; osv-scanner
 covers the same advisories.
 
+**SonarQube Cloud findings (1.1.0).** SonarQube Cloud's quality gate looks at new code only, so
+gates 1.0.0 was released with 32 open issues and a security rating of E. Since 1.1.0 every
+open issue, of any type and severity, and every security hotspot to review counts like an
+alert: it fails the release, the weekly Security run and CI's sonar job unless
+`code-scanning-ignores.toml` accepts it, with tool "SonarQube Cloud", its rule and its file.
+Nothing is marked as false positive, accepted or safe in SonarQube Cloud's web UI: the reason
+and the date live in the repository.
+
 **Releases (Q7, Q8).** Every release file gets a build provenance attestation, the Sigstore
 bundle and a CycloneDX SBOM; npm and PyPI packages get their registry's provenance;
 registry-only libraries attach their packages to the GitHub release.
