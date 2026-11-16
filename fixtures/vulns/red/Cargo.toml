@@ -8,4 +8,4 @@ publish = false
 # The planted finding: time 0.1.43 has RUSTSEC-2020-0071. The lockfile pins it; the OSV
 # gate must fail.
 [dependencies]
-time = "=0.1.43"
+time = "=0.2.0"
