@@ -3,7 +3,8 @@
 Both lists come from GitHub's API, one JSON object per line:
 
     gh api --paginate "repos/$R/code-scanning/alerts?state=open&ref=$REF&per_page=100" --jq '.[]' > code.jsonl
-    gh api --paginate "repos/$R/secret-scanning/alerts?state=open&per_page=100" --jq '.[] | del(.secret)' > secrets.jsonl
+    gh api --paginate "repos/$R/secret-scanning/alerts?state=open&per_page=100" \\
+        --jq '.[] | del(.secret)' > secrets.jsonl
     python3 alerts_gate.py --code code.jsonl --secrets secrets.jsonl --ignores code-scanning-ignores.toml
 
 Every open code-scanning alert, of any tool and severity, blocks unless an [[IgnoredAlerts]]
