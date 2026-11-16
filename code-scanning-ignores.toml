@@ -28,3 +28,17 @@ ignoreUntil = 2027-05-14
 reason = """Single maintainer: the ruleset blocks deletion and force-pushes and requires a \
 pull request with green CI, but no approval, since nobody else can give one. Scorecard scores \
 the missing approvers and stale-review dismissal, so it stays below maximal."""
+
+[[IgnoredAlerts]]
+tool = "Scorecard"
+rule = "MaintainedID"
+ignoreUntil = 2027-02-13
+reason = """The repository was created on 2026-11-15; Scorecard flags every repository younger \
+than 90 days, whatever its activity. The finding ends by itself on 2027-02-13."""
+
+[[IgnoredAlerts]]
+tool = "Scorecard"
+rule = "VulnerabilitiesID"
+ignoreUntil = 2027-05-14
+reason = """fixtures/vulns/red holds a vulnerable dependency on purpose: the self-test proves the \
+OSV gate fails on it. The gate's own scan excludes the fixtures; Scorecard does not."""
