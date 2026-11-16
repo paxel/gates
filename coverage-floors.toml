@@ -1,4 +1,4 @@
 [[parts]]
 name = "scripts"
 lcov = "coverage/scripts.lcov"
-floor = 91.08
+floor = 92.71
