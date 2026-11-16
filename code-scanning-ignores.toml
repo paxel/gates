@@ -42,3 +42,10 @@ rule = "VulnerabilitiesID"
 ignoreUntil = 2027-05-14
 reason = """fixtures/vulns/red holds a vulnerable dependency on purpose: the self-test proves the \
 OSV gate fails on it. The gate's own scan excludes the fixtures; Scorecard does not."""
+
+[[IgnoredAlerts]]
+tool = "CodeQL"
+rule = "py/clear-text-logging-sensitive-data"
+ignoreUntil = 2027-05-14
+reason = """scripts/alerts_gate.py prints the type and the URL of a secret-scanning alert, never \
+the value, which the fetch already drops. CodeQL takes GitHub's field name secret_type for a secret."""
