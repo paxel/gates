@@ -21,6 +21,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- The Python gate and the fuzz workflow run every tool with `uv run --locked`: an outdated
+  `uv.lock` fails the run instead of being resolved anew
+  ([gate-1027](https://github.com/paxel/gates/issues/32)).
 - The Scorecard template starts with `permissions: contents: read` instead of `read-all`;
   a repository copies the new template
   ([gate-1030](https://github.com/paxel/gates/issues/35)).
