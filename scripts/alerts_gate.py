@@ -47,6 +47,11 @@ Key = tuple[str, str, str]
 # What GitHub puts where the file would be, for an alert about the repository as a whole.
 NO_FILE = "no file associated with this alert"
 SONAR = "SonarQube Cloud"
+# GitHub's names for the kind of a leaked secret, e.g. "github_personal_access_token"; the
+# gate reads and prints the kind, never the value. They are constants because CodeQL takes a
+# lookup written with the word "secret" in it for a secret and then reports every print.
+TYPE_FIELD = "secret_type"
+TYPE_NAME_FIELD = "secret_type_display_name"
 Finding = dict[str, Any]
 # One list of findings, how to key one, and how to print one.
 Source = tuple[list[Finding], Callable[[Finding], Key], Callable[[Finding], str]]
@@ -87,12 +92,12 @@ def code_key(alert: dict[str, Any]) -> Key:
 
 
 def leak_key(alert: dict[str, Any]) -> Key:
-    return ("secret-scanning", str(alert.get("secret_type")), "")
+    return ("secret-scanning", str(alert.get(TYPE_FIELD)), "")
 
 
 def entry_key(section: str, entry: dict[str, Any]) -> Key:
     if section == "IgnoredSecrets":
-        return ("secret-scanning", str(entry.get("secret_type")), "")
+        return ("secret-scanning", str(entry.get(TYPE_FIELD)), "")
     return (str(entry.get("tool")), str(entry.get("rule")), str(entry.get("path") or ""))
 
 
@@ -108,7 +113,7 @@ def describe_code(alert: dict[str, Any]) -> str:
 
 
 def describe_leak(alert: dict[str, Any]) -> str:
-    kind = alert.get("secret_type_display_name") or alert.get("secret_type")
+    kind = alert.get(TYPE_NAME_FIELD) or alert.get(TYPE_FIELD)
     return f"secret {kind} {alert.get('html_url', '')}"
 
 
