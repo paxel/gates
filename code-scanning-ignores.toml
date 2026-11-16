@@ -104,3 +104,12 @@ path = "scripts/to_lcov.py"
 ignoreUntil = 2027-05-14
 reason = """A command-line tool the workflows run with arguments written in them; opening the \
 file it is given is its purpose, and no caller has fewer rights than the script."""
+
+[[IgnoredAlerts]]
+tool = "SonarQube Cloud"
+rule = "pythonsecurity:S2083"
+path = "scripts/coverage_ratchet.py"
+ignoreUntil = 2027-05-14
+reason = """The ratchet reads coverage-floors.toml, replaces the raised floor and writes the same \
+file back. SonarQube Cloud takes the file's own content for a value that decides where is written; \
+the path is the --floors argument, never the content."""
