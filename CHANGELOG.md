@@ -21,6 +21,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- The caller templates `ci.yml` and `content-ci.yml` run on pull requests and on pushes to
+  `summer`, no longer on every push to every branch
+  ([gate-1031](https://github.com/paxel/gates/issues/37)).
 - The Python gate and the fuzz workflow run every tool with `uv run --locked`: an outdated
   `uv.lock` fails the run instead of being resolved anew. They also pass `--no-build`: a
   dependency without a wheel fails the gate; only the project itself is still built

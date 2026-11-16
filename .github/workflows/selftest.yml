@@ -5,9 +5,11 @@ name: Self-test
 # where it must fail. A job that calls a shared workflow cannot be allowed to fail, so the red
 # cases run as steps with continue-on-error and then insist on the failure. A gate that was
 # never seen red proves nothing.
+# A branch gets its run through its pull request; a run per push as well would be the same
+# jobs twice, and SonarQube Cloud analyses only the default branch and pull requests.
 on:
   push:
-    branches: ["**"]
+    branches: [summer]
   pull_request:
   workflow_call:
 

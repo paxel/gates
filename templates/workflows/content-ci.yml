@@ -2,9 +2,11 @@ name: CI
 
 # The checks of a repository without app code, from paxel/gates. One kind per repository:
 # formulas (with tap), scoop, skills or site (with the page directories).
+# A branch gets its run through its pull request; a run per push as well would be the same
+# jobs twice.
 on:
   push:
-    branches: ["**"]
+    branches: [summer]
   pull_request:
 
 permissions:

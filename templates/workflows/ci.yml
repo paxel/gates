@@ -1,11 +1,13 @@
 name: CI
 
-# The gates every push and pull request runs, from paxel/gates (the standard: its
-# standard.toml). Keep the jobs of this repository's stacks and delete the others; Sonar waits
+# The gates every pull request and every push to summer runs, from paxel/gates (the standard:
+# its standard.toml). Keep the jobs of this repository's stacks and delete the others; Sonar waits
 # for them because it reads the coverage they measured.
+# A branch gets its run through its pull request; a run per push as well would be the same
+# jobs twice, and SonarQube Cloud analyses only the default branch and pull requests.
 on:
   push:
-    branches: ["**"]
+    branches: [summer]
   pull_request:
 
 concurrency:

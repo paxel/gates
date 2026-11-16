@@ -3,9 +3,11 @@ name: CI
 # gates' own gates, through its own shared workflows (Q17): the OSV gate, the Python gate on
 # the scripts, actionlint on every workflow and template, and SonarQube Cloud. The self-test of
 # every gate on its fixtures is selftest.yml.
+# A branch gets its run through its pull request; a run per push as well would be the same
+# jobs twice, and SonarQube Cloud analyses only the default branch and pull requests.
 on:
   push:
-    branches: ["**"]
+    branches: [summer]
   pull_request:
 
 concurrency:
