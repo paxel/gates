@@ -36,3 +36,6 @@ pythonpath = ["scripts", "scripts/audit"]
 
 [tool.coverage.run]
 source = ["scripts"]
+# The Cobertura XML then names scripts/, not the runner path of the job that measured it;
+# SonarQube Cloud reads it in another job.
+relative_files = true
