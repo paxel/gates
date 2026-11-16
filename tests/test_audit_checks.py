@@ -124,6 +124,18 @@ class AuditChecksTest(unittest.TestCase):
         self.assertEqual(res["pinned"].state, "present")
         self.assertEqual(res["permissions"].state, "drift")
 
+    def test_permissions_on_one_line_count_too(self) -> None:
+        for head, state in (
+            ("permissions: read-all\n", "present"),
+            ("permissions:   {}\n", "present"),
+            ("permissions: write-all\n", "drift"),
+            ("permissions:\n  contents: write\n", "drift"),
+            ("on: push\n\npermissions:\n  contents: read\n", "present"),
+        ):
+            with self.subTest(head=head):
+                self.write({".github/workflows/a.yml": head + "jobs:\n  a:\n    steps: []\n"})
+                self.assertEqual(self.results(self.repo())["permissions"].state, state)
+
     def test_the_scorecard_copy_must_match_the_template(self) -> None:
         template = (ROOT / "templates" / "workflows" / "scorecard.yml").read_text()
         self.write({".github/workflows/scorecard.yml": template})
