@@ -8,8 +8,11 @@ name: SonarQube Cloud
 #   uses: paxel/gates/.github/workflows/sonar.yml@<sha> # vX.Y.Z
 #   secrets: { sonar-token: "${{ secrets.SQ_TOKEN }}" }
 # SonarQube Cloud's quality gate looks at new code only. After the scan the job therefore reads
-# every open issue and every hotspot to review, of the branch or of the pull request and its
-# target branch, and fails on each one that code-scanning-ignores.toml does not accept.
+# every open issue and every hotspot to review and fails on each one that
+# code-scanning-ignores.toml does not accept: on a push those of the branch, on a pull request
+# those the pull request adds. A pull request is not judged on what its target branch has open,
+# or the one that fixes a finding there could never go green; the push after the merge, the
+# release and the weekly Security run judge the whole branch.
 on:
   workflow_call:
     inputs:
@@ -62,11 +65,9 @@ jobs:
           SONAR_TOKEN: ${{ secrets.sonar-token }}
           IGNORES: ${{ inputs.ignores }}
           PULL_REQUEST: ${{ github.event.pull_request.number }}
-          # A pull request is measured on what it adds and on what its target branch has.
-          BRANCH: ${{ github.base_ref || github.ref_name }}
+          BRANCH: ${{ github.ref_name }}
         run: |
           test -f "$IGNORES" || { echo "::error::no $IGNORES: every repository accepts its findings there"; exit 1; }
-          set -- --branch "$BRANCH"
-          [ -n "$PULL_REQUEST" ] && set -- "$@" --pull-request "$PULL_REQUEST"
+          if [ -n "$PULL_REQUEST" ]; then set -- --pull-request "$PULL_REQUEST"; else set -- --branch "$BRANCH"; fi
           python3 .gates/scripts/sonar_fetch.py "$@" > "$RUNNER_TEMP/sonar.jsonl"
           python3 .gates/scripts/alerts_gate.py --sonar "$RUNNER_TEMP/sonar.jsonl" --ignores "$IGNORES"
