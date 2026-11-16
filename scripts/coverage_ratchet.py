@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import fnmatch
 import json
+import os
 import pathlib
 import re
 import sys
@@ -36,6 +37,25 @@ from typing import Any
 MARGIN = 0.10
 
 
+def inside(root: pathlib.Path, path: str) -> pathlib.Path:
+    """root/path for a path named in the floors file; it must not leave the repository."""
+    joined = os.path.normpath(os.path.join(root, path))
+    if os.path.commonpath([str(root), joined]) != str(root):
+        raise ValueError(f"{path} is outside the repository")
+    return pathlib.Path(joined)
+
+
+def source(path: str, root: pathlib.Path) -> str:
+    """A source file of an lcov record as the exclude patterns name it: relative to the root.
+
+    Nothing is looked up on disk; the path comes from the report.
+    """
+    path = os.path.normpath(path)
+    if os.path.isabs(path) and os.path.commonpath([str(root), path]) == str(root):
+        return os.path.relpath(path, root)
+    return path
+
+
 def measure(lcov: pathlib.Path, root: pathlib.Path, exclude: Sequence[str]) -> tuple[int, int]:
     """(lines found, lines hit) over every source file not excluded."""
     found = hit = 0
@@ -43,11 +63,7 @@ def measure(lcov: pathlib.Path, root: pathlib.Path, exclude: Sequence[str]) -> t
     for raw in lcov.read_text(encoding="utf-8").splitlines():
         line = raw.strip()
         if line.startswith("SF:"):
-            path = pathlib.Path(line[3:])
-            try:
-                current = str(path.resolve().relative_to(root))
-            except ValueError:
-                current = str(path)
+            current = source(line[3:], root)
         elif line.startswith("LF:") and current is not None and not excluded(current, exclude):
             found += int(line[3:])
         elif line.startswith("LH:") and current is not None and not excluded(current, exclude):
@@ -109,7 +125,9 @@ def main(argv: Sequence[str]) -> int:
     for part in parts:
         name, floor = str(part["name"]), float(part["floor"])
         try:
-            found, hit = measure(root / str(part["lcov"]), root, list(part.get("exclude") or []))
+            if not re.fullmatch(r"[\w.-]+", name):
+                raise ValueError(f"the part's name {name!r} is no file name for its badge")
+            found, hit = measure(inside(root, str(part["lcov"])), root, list(part.get("exclude") or []))
         except (OSError, ValueError) as error:
             print(f"coverage {name}: cannot read {part['lcov']}: {error}", file=sys.stderr)
             return 2

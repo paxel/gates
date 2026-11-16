@@ -31,6 +31,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `code-scanning-ignores.toml` and is accepted for that file only; an entry that leaves the
   path out blocks ([gate-1022](https://github.com/paxel/gates/issues/27)).
 
+### Security
+
+- The coverage ratchet refuses an lcov path in `coverage-floors.toml` that leaves the
+  repository and a part name that is no file name, and no longer looks up on disk the source
+  paths a coverage report names ([gate-1026](https://github.com/paxel/gates/issues/31)).
+
 ---
 
 Historical changes have been moved to [OLDER_CHANGES.md](OLDER_CHANGES.md).

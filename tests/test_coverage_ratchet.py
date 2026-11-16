@@ -75,6 +75,34 @@ class CoverageRatchetTest(unittest.TestCase):
         )
         self.assertEqual(self.run_it("--check")[0], 0)
 
+    def test_an_absolute_source_inside_the_repository_is_excluded_by_its_relative_name(self) -> None:
+        inside = str(self.root.resolve() / "src" / "beeper.rs")
+        self.write(90.0, ("src/a.rs", 100, 95), (inside, 100, 0), exclude='exclude = ["src/beeper.rs"]\n')
+        self.assertEqual(self.run_it("--check")[0], 0)
+        self.write(
+            90.0, ("src/a.rs", 100, 95), ("/elsewhere/src/b.rs", 100, 0), exclude='exclude = ["b.rs"]\n'
+        )
+        self.assertEqual(self.run_it("--check")[0], 0)
+
+    def test_an_lcov_outside_the_repository_is_exit_2(self) -> None:
+        self.write(10.0, ("a", 1, 1))
+        floors = self.root / "coverage-floors.toml"
+        for path in ("../core.lcov", "/etc/hostname", "a/../../core.lcov"):
+            with self.subTest(path=path):
+                floors.write_text(f'[[parts]]\nname = "core"\nlcov = "{path}"\nfloor = 1.0\n')
+                code, out = self.run_it("--check")
+                self.assertEqual(code, 2)
+                self.assertIn("is outside the repository", out)
+
+    def test_a_part_name_that_is_no_file_name_is_exit_2(self) -> None:
+        (self.root / "core.lcov").write_text(lcov(("a", 1, 1)))
+        (self.root / "coverage-floors.toml").write_text(
+            '[[parts]]\nname = "../core"\nlcov = "core.lcov"\nfloor = 1.0\n'
+        )
+        code, out = self.run_it()
+        self.assertEqual(code, 2)
+        self.assertIn("no file name for its badge", out)
+
     def test_an_empty_measure_fails(self) -> None:
         self.write(10.0)
         code, out = self.run_it("--check")
