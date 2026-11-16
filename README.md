@@ -44,7 +44,7 @@ issue in every repository that drifts from the standard.
 | `codeql.yml`       | CodeQL for the repo's languages and its workflows                         |
 | `sonar.yml`        | SonarQube Cloud with the coverage of the stack workflows                  |
 | `fuzz.yml`         | the repo's fuzz targets on a schedule                                     |
-| `release-gate.yml` | open alerts, vulnerabilities, licences and the CHANGELOG section          |
+| `release-gate.yml` | open alerts, SonarQube Cloud findings, vulnerabilities, licences, CHANGELOG |
 | `provenance.yml`   | attestation, Sigstore bundle and SBOM for every release file              |
 
 ## Licence

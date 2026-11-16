@@ -12,6 +12,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   security hotspots to review; each blocks unless `code-scanning-ignores.toml` accepts it with
   tool "SonarQube Cloud", its rule and its file
   ([gate-1023](https://github.com/paxel/gates/issues/28)).
+- `release-gate.yml` reads the SonarQube Cloud findings of every caller that has a
+  `sonar-project.properties` and fails when they cannot be read; the weekly Security run
+  uses it too ([gate-1024](https://github.com/paxel/gates/issues/29)).
 
 ### Changed
 
