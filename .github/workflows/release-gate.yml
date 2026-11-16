@@ -83,8 +83,7 @@ jobs:
           # sonar-project.properties means the repository has a SonarQube Cloud project; then its
           # findings must be readable. A code repository without the file is the audit's finding.
           if [ -f sonar-project.properties ]; then
-            python3 ../.gates/scripts/sonar_fetch.py --properties sonar-project.properties \
-              --branch "$BRANCH" --out ../sonar.jsonl
+            python3 ../.gates/scripts/sonar_fetch.py --branch "$BRANCH" > ../sonar.jsonl
           else
             echo "no sonar-project.properties: no SonarQube Cloud findings to read"
           fi

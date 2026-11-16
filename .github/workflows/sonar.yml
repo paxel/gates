@@ -66,7 +66,7 @@ jobs:
           BRANCH: ${{ github.base_ref || github.ref_name }}
         run: |
           test -f "$IGNORES" || { echo "::error::no $IGNORES: every repository accepts its findings there"; exit 1; }
-          set -- --properties sonar-project.properties --branch "$BRANCH" --out "$RUNNER_TEMP/sonar.jsonl"
+          set -- --branch "$BRANCH"
           [ -n "$PULL_REQUEST" ] && set -- "$@" --pull-request "$PULL_REQUEST"
-          python3 .gates/scripts/sonar_fetch.py "$@"
+          python3 .gates/scripts/sonar_fetch.py "$@" > "$RUNNER_TEMP/sonar.jsonl"
           python3 .gates/scripts/alerts_gate.py --sonar "$RUNNER_TEMP/sonar.jsonl" --ignores "$IGNORES"

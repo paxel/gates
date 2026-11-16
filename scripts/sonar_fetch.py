@@ -1,17 +1,17 @@
 """Fetches a project's open SonarQube Cloud findings for alerts_gate.py.
 
-    python3 sonar_fetch.py --properties sonar-project.properties --branch summer --out sonar.jsonl
-    python3 sonar_fetch.py --properties sonar-project.properties --branch summer --pull-request 12 \\
-        --out sonar.jsonl
+    python3 sonar_fetch.py --branch summer > sonar.jsonl
+    python3 sonar_fetch.py --branch summer --pull-request 12 > sonar.jsonl
 
-Reads sonar.projectKey from the properties file and writes every open issue and every security
-hotspot to review, one JSON object per line: those of the branch, those a pull request adds,
-or both. SonarQube Cloud's quality gate looks at new code only; this is the whole list.
+Run in the repository's root: reads sonar.projectKey from sonar-project.properties there and
+prints every open issue and every security hotspot to review, one JSON object per line: those
+of the branch, those a pull request adds, or both. SonarQube Cloud's quality gate looks at new
+code only; this is the whole list. The script takes no path from its arguments.
 
 A public project is read without a token; a private one needs SONAR_TOKEN in the environment.
 
-Exit 0: the list is written. Exit 2: the properties name no project, or SonarQube Cloud cannot
-be read; a gate that could not read the findings must not pass.
+Exit 0: the list is printed. Exit 2: the properties name no project, or SonarQube Cloud cannot
+be read, and nothing is printed; a gate that could not read the findings must not pass.
 """
 
 from __future__ import annotations
@@ -28,6 +28,7 @@ from collections.abc import Callable, Sequence
 from typing import Any
 
 HOST = "https://sonarcloud.io"
+PROPERTIES = pathlib.Path("sonar-project.properties")
 PAGE = 500
 # SonarQube Cloud returns at most this many results of one search.
 LIMIT = 10000
@@ -85,12 +86,10 @@ def findings(get: Get, project: str, where: dict[str, str]) -> list[dict[str, An
     return [{**finding, "project": project} for finding in issues + hotspots]
 
 
-def main(argv: Sequence[str], get: Get = fetch) -> int:
+def main(argv: Sequence[str], get: Get = fetch, properties: pathlib.Path = PROPERTIES) -> int:
     parser = argparse.ArgumentParser(prog="sonar_fetch.py")
-    parser.add_argument("--properties", required=True)
     parser.add_argument("--branch")
     parser.add_argument("--pull-request")
-    parser.add_argument("--out", required=True)
     try:
         args = parser.parse_args(argv)
     except SystemExit:
@@ -102,14 +101,14 @@ def main(argv: Sequence[str], get: Get = fetch) -> int:
         print("sonar: name a --branch, a --pull-request or both", file=sys.stderr)
         return 2
     try:
-        project = project_key(pathlib.Path(args.properties).read_text(encoding="utf-8"))
+        project = project_key(properties.read_text(encoding="utf-8"))
         found = [finding for where in scopes for finding in findings(get, project, where)]
-        text = "".join(json.dumps(finding) + "\n" for finding in found)
-        pathlib.Path(args.out).write_text(text, encoding="utf-8")
     except (OSError, ValueError, urllib.error.URLError) as error:
         print(f"sonar: cannot read the findings: {error}", file=sys.stderr)
         return 2
-    print(f"{len(found)} open SonarQube Cloud findings of {project}")
+    for finding in found:
+        print(json.dumps(finding))
+    print(f"{len(found)} open SonarQube Cloud findings of {project}", file=sys.stderr)
     return 0
 
 

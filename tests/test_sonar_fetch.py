@@ -32,16 +32,16 @@ class SonarFetchTest(unittest.TestCase):
         self.dir = pathlib.Path(tmp.name)
         self.properties = self.dir / "sonar-project.properties"
         self.properties.write_text("# comment\nsonar.organization=paxel\nsonar.projectKey = paxel_x\n")
-        self.out = self.dir / "sonar.jsonl"
+        self.out = StringIO()
 
     def run_main(self, get: sonar_fetch.Get, *extra: str) -> tuple[int, str]:
         err = StringIO()
-        with redirect_stdout(StringIO()), redirect_stderr(err):
-            code = main(["--properties", str(self.properties), "--out", str(self.out), *extra], get)
+        with redirect_stdout(self.out), redirect_stderr(err):
+            code = main(list(extra), get, self.properties)
         return code, err.getvalue()
 
     def written(self) -> list[dict[str, Any]]:
-        return [json.loads(line) for line in self.out.read_text().splitlines()]
+        return [json.loads(line) for line in self.out.getvalue().splitlines()]
 
     def test_the_project_key_is_read_from_the_properties(self) -> None:
         self.assertEqual(project_key("a=b\nsonar.projectKey=paxel_x\n"), "paxel_x")
@@ -83,7 +83,7 @@ class SonarFetchTest(unittest.TestCase):
         code, err = self.run_main(lambda _path, _params: {"errors": [{"msg": "no"}]}, "--branch", "summer")
         self.assertEqual(code, 2)
         self.assertIn("cannot read the findings", err)
-        self.assertFalse(self.out.exists())
+        self.assertEqual(self.out.getvalue(), "")
 
     def test_an_unreachable_cloud_is_exit_2(self) -> None:
         def get(_path: str, _params: dict[str, str]) -> dict[str, Any]:
@@ -98,7 +98,7 @@ class SonarFetchTest(unittest.TestCase):
     def test_no_branch_and_no_pull_request_is_exit_2(self) -> None:
         self.assertEqual(self.run_main(Cloud([], []))[0], 2)
         with redirect_stderr(StringIO()):
-            self.assertEqual(main([]), 2)
+            self.assertEqual(main(["--no-such-option"]), 2)
 
     def test_fetch_sends_the_token_and_decodes_the_answer(self) -> None:
         response = mock.MagicMock()
