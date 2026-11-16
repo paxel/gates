@@ -59,7 +59,7 @@ def code_key(alert: dict[str, Any]) -> Key:
     return (str((alert.get("tool") or {}).get("name")), str((alert.get("rule") or {}).get("id")))
 
 
-def secret_key(alert: dict[str, Any]) -> Key:
+def leak_key(alert: dict[str, Any]) -> Key:
     return ("secret-scanning", str(alert.get("secret_type")))
 
 
@@ -77,14 +77,14 @@ def describe_code(alert: dict[str, Any]) -> str:
     return f"{tool} {rule_id} ({severity}) {location.get('path', '?')} {alert.get('html_url', '')}"
 
 
-def describe_secret(alert: dict[str, Any]) -> str:
+def describe_leak(alert: dict[str, Any]) -> str:
     name = alert.get("secret_type_display_name") or alert.get("secret_type")
     return f"secret {name} {alert.get('html_url', '')}"
 
 
 def gate(
     code: list[dict[str, Any]],
-    secrets: list[dict[str, Any]],
+    leaks: list[dict[str, Any]],
     ignores: dict[str, Any],
     today: datetime.date,
 ) -> tuple[list[str], int]:
@@ -101,7 +101,7 @@ def gate(
             else:
                 entries[key] = entry
     seen: set[Key] = set()
-    for alerts, key_of, describe in ((code, code_key, describe_code), (secrets, secret_key, describe_secret)):
+    for alerts, key_of, describe in ((code, code_key, describe_code), (leaks, leak_key, describe_leak)):
         for alert in alerts:
             key = key_of(alert)
             seen.add(key)
@@ -115,7 +115,7 @@ def gate(
         if key not in seen:
             lines.append(f"no open alert, the entry can go: {key[0]} {key[1]}")
     lines.append(
-        f"{len(code)} code-scanning and {len(secrets)} secret-scanning alerts open, {blocking} blocking"
+        f"{len(code)} code-scanning and {len(leaks)} secret-scanning alerts open, {blocking} blocking"
     )
     return lines, blocking
 
@@ -123,7 +123,7 @@ def gate(
 def main(argv: Sequence[str], today: datetime.date | None = None) -> int:
     parser = argparse.ArgumentParser(prog="alerts_gate.py")
     parser.add_argument("--code", required=True)
-    parser.add_argument("--secrets", required=True)
+    parser.add_argument("--secrets", dest="leaks", required=True)
     parser.add_argument("--ignores", required=True)
     try:
         args = parser.parse_args(argv)
@@ -131,13 +131,13 @@ def main(argv: Sequence[str], today: datetime.date | None = None) -> int:
         return 2
     try:
         code = read_jsonl(args.code)
-        secrets = read_jsonl(args.secrets)
+        leaks = read_jsonl(args.leaks)
         with open(args.ignores, "rb") as f:
             ignores = tomllib.load(f)
     except (OSError, ValueError) as error:
         print(f"cannot read the alerts or the ignores: {error}", file=sys.stderr)
         return 2
-    lines, blocking = gate(code, secrets, ignores, today or datetime.date.today())
+    lines, blocking = gate(code, leaks, ignores, today or datetime.date.today())
     for line in lines:
         print(line)
     return 1 if blocking else 0

@@ -21,7 +21,7 @@ def alert(tool: str, rule: str, url: str, severity: str = "high") -> dict[str, A
     }
 
 
-def secret(kind: str, url: str) -> dict[str, Any]:
+def leak(kind: str, url: str) -> dict[str, Any]:
     return {"html_url": url, "secret_type": kind, "secret_type_display_name": kind.title()}
 
 
@@ -33,12 +33,12 @@ ACCEPT = (
 
 class AlertsGateTest(unittest.TestCase):
     def run_gate(
-        self, code: list[dict[str, Any]], secrets: list[dict[str, Any]] | None = None, ignores: str = ""
+        self, code: list[dict[str, Any]], leaks: list[dict[str, Any]] | None = None, ignores: str = ""
     ) -> tuple[int, str]:
         with tempfile.TemporaryDirectory() as tmp:
             t = pathlib.Path(tmp)
             (t / "code.jsonl").write_text("".join(json.dumps(a) + "\n" for a in code))
-            (t / "secrets.jsonl").write_text("".join(json.dumps(a) + "\n" for a in (secrets or [])))
+            (t / "secrets.jsonl").write_text("".join(json.dumps(a) + "\n" for a in (leaks or [])))
             (t / "ignores.toml").write_text(ignores)
             out = StringIO()
             with redirect_stdout(out):
@@ -74,7 +74,7 @@ class AlertsGateTest(unittest.TestCase):
         self.assertEqual(self.run_gate([alert("CodeQL", "CodeReviewID", "u1")], ignores=ACCEPT)[0], 1)
 
     def test_an_open_secret_blocks(self) -> None:
-        code, out = self.run_gate([], [secret("github_personal_access_token", "s1")])
+        code, out = self.run_gate([], [leak("github_personal_access_token", "s1")])
         self.assertEqual(code, 1)
         self.assertIn("OPEN: secret Github_Personal_Access_Token s1", out)
 
@@ -83,7 +83,7 @@ class AlertsGateTest(unittest.TestCase):
             '[[IgnoredSecrets]]\nsecret_type = "test_token"\n'
             'ignoreUntil = 2027-01-01\nreason = "fixture token, revoked"\n'
         )
-        self.assertEqual(self.run_gate([], [secret("test_token", "s1")], ignores)[0], 0)
+        self.assertEqual(self.run_gate([], [leak("test_token", "s1")], ignores)[0], 0)
 
     def test_a_passed_date_blocks(self) -> None:
         code, out = self.run_gate(
