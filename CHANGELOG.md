@@ -21,6 +21,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- The Scorecard template starts with `permissions: contents: read` instead of `read-all`;
+  a repository copies the new template
+  ([gate-1030](https://github.com/paxel/gates/issues/35)).
 - An accepted code-scanning alert that is in a file names that file as `path` in
   `code-scanning-ignores.toml` and is accepted for that file only; an entry that leaves the
   path out blocks ([gate-1022](https://github.com/paxel/gates/issues/27)).
