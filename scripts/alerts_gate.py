@@ -8,7 +8,10 @@ Both lists come from GitHub's API, one JSON object per line:
     python3 alerts_gate.py --code code.jsonl --secrets secrets.jsonl --ignores code-scanning-ignores.toml
 
 Every open code-scanning alert, of any tool and severity, blocks unless an [[IgnoredAlerts]]
-entry names its tool and rule with a reason and an ignoreUntil date that has not passed.
+entry names its tool, its rule and, when the alert is in a file, that file as path, with a
+reason and an ignoreUntil date that has not passed. An entry covers its rule in that one file;
+an entry without a path covers only an alert that has no file (Scorecard's repository-level
+ones), and one that leaves out the path of an alert in a file blocks.
 Every open secret-scanning alert blocks unless an [[IgnoredSecrets]] entry names its secret
 type the same way. An entry without a reason or a date, or with a passed date, blocks too;
 that is the review. An entry without an open alert is listed so it can go.
@@ -29,7 +32,10 @@ import tomllib
 from collections.abc import Sequence
 from typing import Any
 
-Key = tuple[str, str]
+# Tool, rule and file; the file is empty for a finding that has none.
+Key = tuple[str, str, str]
+# What GitHub puts where the file would be, for an alert about the repository as a whole.
+NO_FILE = "no file associated with this alert"
 
 
 def read_jsonl(path: str) -> list[dict[str, Any]]:
@@ -55,31 +61,41 @@ def problems(entry: dict[str, Any], today: datetime.date) -> list[str]:
     return found
 
 
+def code_path(alert: dict[str, Any]) -> str:
+    location = (alert.get("most_recent_instance") or {}).get("location") or {}
+    path = str(location.get("path") or "")
+    return "" if path == NO_FILE else path
+
+
 def code_key(alert: dict[str, Any]) -> Key:
-    return (str((alert.get("tool") or {}).get("name")), str((alert.get("rule") or {}).get("id")))
+    tool = str((alert.get("tool") or {}).get("name"))
+    return (tool, str((alert.get("rule") or {}).get("id")), code_path(alert))
 
 
 def leak_key(alert: dict[str, Any]) -> Key:
-    return ("secret-scanning", str(alert.get("secret_type")))
+    return ("secret-scanning", str(alert.get("secret_type")), "")
 
 
 def entry_key(section: str, entry: dict[str, Any]) -> Key:
     if section == "IgnoredSecrets":
-        return ("secret-scanning", str(entry.get("secret_type")))
-    return (str(entry.get("tool")), str(entry.get("rule")))
+        return ("secret-scanning", str(entry.get("secret_type")), "")
+    return (str(entry.get("tool")), str(entry.get("rule")), str(entry.get("path") or ""))
+
+
+def name(key: Key) -> str:
+    return " ".join(part for part in key if part)
 
 
 def describe_code(alert: dict[str, Any]) -> str:
     rule = alert.get("rule") or {}
     severity = rule.get("security_severity_level") or rule.get("severity") or "?"
-    location = (alert.get("most_recent_instance") or {}).get("location") or {}
-    tool, rule_id = code_key(alert)
-    return f"{tool} {rule_id} ({severity}) {location.get('path', '?')} {alert.get('html_url', '')}"
+    tool, rule_id, path = code_key(alert)
+    return f"{tool} {rule_id} ({severity}) {path or 'no file'} {alert.get('html_url', '')}"
 
 
 def describe_leak(alert: dict[str, Any]) -> str:
-    name = alert.get("secret_type_display_name") or alert.get("secret_type")
-    return f"secret {name} {alert.get('html_url', '')}"
+    kind = alert.get("secret_type_display_name") or alert.get("secret_type")
+    return f"secret {kind} {alert.get('html_url', '')}"
 
 
 def gate(
@@ -96,11 +112,12 @@ def gate(
             key = entry_key(section, entry)
             bad = problems(entry, today)
             if bad:
-                lines.append(f"BAD ENTRY: {section} {key[0]} {key[1]}: {', '.join(bad)}")
+                lines.append(f"BAD ENTRY: {section} {name(key)}: {', '.join(bad)}")
                 blocking += 1
             else:
                 entries[key] = entry
     seen: set[Key] = set()
+    pathless: set[Key] = set()
     for alerts, key_of, describe in ((code, code_key, describe_code), (leaks, leak_key, describe_leak)):
         for alert in alerts:
             key = key_of(alert)
@@ -111,9 +128,14 @@ def gate(
             else:
                 lines.append(f"OPEN: {describe(alert)}")
                 blocking += 1
+                if key[2] and (key[0], key[1], "") in entries:
+                    pathless.add((key[0], key[1], ""))
+    for key in sorted(pathless):
+        lines.append(f"BAD ENTRY: IgnoredAlerts {name(key)}: no path, but the finding is in a file")
+        blocking += 1
     for key in entries:
-        if key not in seen:
-            lines.append(f"no open alert, the entry can go: {key[0]} {key[1]}")
+        if key not in seen and key not in pathless:
+            lines.append(f"no open alert, the entry can go: {name(key)}")
     lines.append(
         f"{len(code)} code-scanning and {len(leaks)} secret-scanning alerts open, {blocking} blocking"
     )

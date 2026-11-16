@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [1.1.0]
 
+### Changed
+
+- An accepted code-scanning alert that is in a file names that file as `path` in
+  `code-scanning-ignores.toml` and is accepted for that file only; an entry that leaves the
+  path out blocks ([gate-1022](https://github.com/paxel/gates/issues/27)).
+
 ---
 
 Historical changes have been moved to [OLDER_CHANGES.md](OLDER_CHANGES.md).

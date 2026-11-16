@@ -34,8 +34,10 @@ value minus 0.1; CI only checks; a badge per floor.
 
 **Alerts (Q5, Q6).** The release and the weekly Security run fail on every open code-scanning
 alert, of any tool and severity, and every open secret-scanning alert that the repository's
-`code-scanning-ignores.toml` does not accept with a reason and a date. Dependabot alerts do
-not count; osv-scanner covers the same advisories.
+`code-scanning-ignores.toml` does not accept with a reason and a date. An accepted alert that
+is in a file names that file, and the entry covers that file only; an entry without a file is
+for an alert about the repository as a whole. Dependabot alerts do not count; osv-scanner
+covers the same advisories.
 
 **Releases (Q7, Q8).** Every release file gets a build provenance attestation, the Sigstore
 bundle and a CycloneDX SBOM; npm and PyPI packages get their registry's provenance;
