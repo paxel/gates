@@ -29,11 +29,16 @@ runs:
           echo "::group::$part ($dir)"
           test -f "$dir/.python-version" || test -f .python-version || { echo "::error::no .python-version (Q15)"; exit 1; }
           python3 "$GITHUB_WORKSPACE/.gates/scripts/config_check.py" --stack python --dir "$dir" --configs "$GITHUB_WORKSPACE/.gates/configs"
-          (cd "$dir" && uv sync --locked --all-extras --dev)
-          (cd "$dir" && uv run ruff format --check .)
-          (cd "$dir" && uv run ruff check .)
-          (cd "$dir" && uv run mypy .)
-          (cd "$dir" && uv run pytest --cov --cov-report=lcov:coverage.lcov --cov-report=xml:coverage.xml)
+          # --locked on every call: a stale uv.lock fails instead of being resolved anew.
+          # --no-build: no dependency is built from its source archive, which would run its
+          # setup code here; each needs a wheel. The project itself is the one exception, uv
+          # has to build it to install it.
+          name=$(cd "$dir" && python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["name"])')
+          (cd "$dir" && uv sync --locked --no-build --no-binary-package "$name" --all-extras --dev)
+          (cd "$dir" && uv run --locked --no-build --no-binary-package "$name" ruff format --check .)
+          (cd "$dir" && uv run --locked --no-build --no-binary-package "$name" ruff check .)
+          (cd "$dir" && uv run --locked --no-build --no-binary-package "$name" mypy .)
+          (cd "$dir" && uv run --locked --no-build --no-binary-package "$name" pytest --cov --cov-report=lcov:coverage.lcov --cov-report=xml:coverage.xml)
           cp "$dir/coverage.lcov" "coverage/$part.lcov"
           # SonarQube Cloud reads Python coverage as Cobertura XML.
           cp "$dir/coverage.xml" "coverage/$part.xml"

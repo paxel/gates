@@ -7,6 +7,9 @@ name: Release gate
 #   secrets: { alerts-token: "${{ secrets.GATES_ALERTS_TOKEN }}" }
 # GITHUB_TOKEN cannot read secret-scanning alerts, so the caller passes a fine-grained token
 # with "Secret scanning alerts: read"; without it the call is invalid and the run fails.
+# A caller with sonar-project.properties has a SonarQube Cloud project: its open issues and
+# hotspots to review are read too and count like alerts. A public project needs no token; a
+# private one passes sonar-token.
 on:
   workflow_call:
     inputs:
@@ -29,13 +32,16 @@ on:
     secrets:
       alerts-token:
         required: true
+      sonar-token:
+        description: Only for a private SonarQube Cloud project.
+        required: false
 
 permissions:
   contents: read
 
 jobs:
   alerts:
-    name: No open code-scanning or secret-scanning alert that is not accepted
+    name: No open alert or SonarQube Cloud finding that is not accepted
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -68,13 +74,28 @@ jobs:
           # The API returns the leaked value in .secret; it never reaches the disk.
           GH_TOKEN="$ALERTS_TOKEN" gh api --paginate "repos/$REPO/secret-scanning/alerts?state=open&per_page=100" \
             --jq '.[] | del(.secret)' > secrets.jsonl
+      - name: Open SonarQube Cloud findings
+        working-directory: src
+        env:
+          SONAR_TOKEN: ${{ secrets.sonar-token }}
+          BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          # sonar-project.properties means the repository has a SonarQube Cloud project; then its
+          # findings must be readable. A code repository without the file is the audit's finding.
+          if [ -f sonar-project.properties ]; then
+            python3 ../.gates/scripts/sonar_fetch.py --branch "$BRANCH" > ../sonar.jsonl
+          else
+            echo "no sonar-project.properties: no SonarQube Cloud findings to read"
+          fi
       - name: Gate
         working-directory: src
         env:
           IGNORES: ${{ inputs.ignores }}
         run: |
           test -f "$IGNORES" || { echo "::error::no $IGNORES: every repository accepts its findings there"; exit 1; }
-          python3 ../.gates/scripts/alerts_gate.py --code ../code.jsonl --secrets ../secrets.jsonl --ignores "$IGNORES"
+          set -- --code ../code.jsonl --secrets ../secrets.jsonl --ignores "$IGNORES"
+          [ -f ../sonar.jsonl ] && set -- "$@" --sonar ../sonar.jsonl
+          python3 ../.gates/scripts/alerts_gate.py "$@"
 
   vulns:
     name: No known vulnerability, no licence outside the allowlist

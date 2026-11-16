@@ -7,8 +7,19 @@ name: SonarQube Cloud
 # coverage/<part>.jacoco.xml for Java, coverage/<part>.out for Go). Callers pin it:
 #   uses: paxel/gates/.github/workflows/sonar.yml@<sha> # vX.Y.Z
 #   secrets: { sonar-token: "${{ secrets.SQ_TOKEN }}" }
+# SonarQube Cloud's quality gate looks at new code only. After the scan the job therefore reads
+# every open issue and every hotspot to review and fails on each one that
+# code-scanning-ignores.toml does not accept: on a push those of the branch, on a pull request
+# those the pull request adds. A pull request is not judged on what its target branch has open,
+# or the one that fixes a finding there could never go green; the push after the merge, the
+# release and the weekly Security run judge the whole branch.
 on:
   workflow_call:
+    inputs:
+      ignores:
+        description: The accepted findings file.
+        type: string
+        default: code-scanning-ignores.toml
     secrets:
       sonar-token:
         required: true
@@ -40,3 +51,23 @@ jobs:
           # The run fails when the quality gate does.
           args: >-
             -Dsonar.qualitygate.wait=true
+
+      # gates comes after the scan, so SonarQube Cloud never analyses its files.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .gates
+          persist-credentials: false
+      - uses: ./.gates/actions/python-pin
+      - name: No open SonarQube Cloud finding that is not accepted
+        env:
+          SONAR_TOKEN: ${{ secrets.sonar-token }}
+          IGNORES: ${{ inputs.ignores }}
+          PULL_REQUEST: ${{ github.event.pull_request.number }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          test -f "$IGNORES" || { echo "::error::no $IGNORES: every repository accepts its findings there"; exit 1; }
+          if [ -n "$PULL_REQUEST" ]; then set -- --pull-request "$PULL_REQUEST"; else set -- --branch "$BRANCH"; fi
+          python3 .gates/scripts/sonar_fetch.py "$@" > "$RUNNER_TEMP/sonar.jsonl"
+          python3 .gates/scripts/alerts_gate.py --sonar "$RUNNER_TEMP/sonar.jsonl" --ignores "$IGNORES"

@@ -18,7 +18,7 @@ at. A check that applies is either present or drift; there is no third state.
 vulnerability, a licence outside the allowlist, a coverage drop, a lint or test failure.
 
 **Accepted finding**: a finding listed in the repository's ignore file with a reason and a
-date; it blocks again once the date has passed.
+date; it blocks again once the date has passed. One entry accepts one rule in one file.
 
 **Shared workflow**: a reusable workflow in gates that a repository calls, pinned by SHA.
 **Caller**: the thin workflow in a repository that calls it.

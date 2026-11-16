@@ -5,9 +5,11 @@ name: Self-test
 # where it must fail. A job that calls a shared workflow cannot be allowed to fail, so the red
 # cases run as steps with continue-on-error and then insist on the failure. A gate that was
 # never seen red proves nothing.
+# A branch gets its run through its pull request; a run per push as well would be the same
+# jobs twice, and SonarQube Cloud analyses only the default branch and pull requests.
 on:
   push:
-    branches: ["**"]
+    branches: [summer]
   pull_request:
   workflow_call:
 
@@ -74,7 +76,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        case: [vulns, unscanned, rust, dart, go, ts, python, java, formulas, scoop, skills, site, ratchet, alerts]
+        case: [vulns, unscanned, rust, dart, go, ts, python, java, formulas, scoop, skills, site, ratchet, alerts, sonar]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -178,6 +180,13 @@ jobs:
         run: >-
           python3 "$GITHUB_WORKSPACE/.gates/scripts/alerts_gate.py" --code code.jsonl
           --secrets secrets.jsonl --ignores code-scanning-ignores.toml
+      - id: sonar
+        if: matrix.case == 'sonar'
+        continue-on-error: true
+        working-directory: fixtures/scripts/sonar-red
+        run: >-
+          python3 "$GITHUB_WORKSPACE/.gates/scripts/alerts_gate.py" --code code.jsonl
+          --secrets secrets.jsonl --sonar sonar.jsonl --ignores code-scanning-ignores.toml
 
       - name: The planted finding failed the gate
         env:

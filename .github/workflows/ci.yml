@@ -3,9 +3,11 @@ name: CI
 # gates' own gates, through its own shared workflows (Q17): the OSV gate, the Python gate on
 # the scripts, actionlint on every workflow and template, and SonarQube Cloud. The self-test of
 # every gate on its fixtures is selftest.yml.
+# A branch gets its run through its pull request; a run per push as well would be the same
+# jobs twice, and SonarQube Cloud analyses only the default branch and pull requests.
 on:
   push:
-    branches: ["**"]
+    branches: [summer]
   pull_request:
 
 concurrency:
@@ -35,7 +37,7 @@ jobs:
           persist-credentials: false
       - name: actionlint 1.7.12, checked against its release checksum
         run: |
-          curl -fsSL -o actionlint.tar.gz https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          curl --proto '=https' --tlsv1.2 -fsSL -o actionlint.tar.gz https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
           echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  actionlint.tar.gz" | sha256sum -c -
           tar -xzf actionlint.tar.gz actionlint
       - name: Workflows

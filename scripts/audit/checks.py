@@ -293,10 +293,11 @@ def k_pinned(repo: Repo, d: dict[str, Any], s: dict[str, Any], c: Context) -> tu
         for line in t.splitlines():
             if line.lstrip().startswith("#"):
                 continue
-            m = re.search(r"uses:\s*(\S+)(.*)$", line)
+            # The action, then whatever follows it on the line (the version comment).
+            m = re.search(r"uses:[ \t]*(\S+)", line)
             if not m or m.group(1).startswith(("./", "docker://")):
                 continue
-            if not SHA.search(m.group(1) + m.group(2)):
+            if not SHA.search(line[m.start(1) :]):
                 bad.append(f"{name}: {m.group(1)}")
     return (not bad), "; ".join(bad[:5]) + (" …" if len(bad) > 5 else "")
 
@@ -305,9 +306,10 @@ def k_permissions(repo: Repo, d: dict[str, Any], s: dict[str, Any], c: Context) 
     bad = []
     for name, t in workflows(repo.root).items():
         head = t.split("\njobs:")[0]
-        m = re.search(r"(?m)^permissions:\s*(.*)$", head)
+        # Either "permissions: read-all" on one line, or the block's first entry on the next.
+        m = re.search(r"(?m)^permissions:[ \t]*(\S.*)?$", head)
         rest = head[m.end() :] if m else ""
-        value = (m.group(1) if m else "") + " " + " ".join(re.findall(r"(?m)^\s+(\S.*)$", rest)[:1])
+        value = ((m.group(1) or "") if m else "") + " " + " ".join(re.findall(r"(?m)^\s+(\S.*)$", rest)[:1])
         if not m or not re.match(r"\s*(read-all|contents:\s*read|\{\})", value.strip() or "x"):
             bad.append(name)
     return (not bad), ("not contents: read in " + ", ".join(bad)) if bad else ""
