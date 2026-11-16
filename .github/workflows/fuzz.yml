@@ -108,8 +108,10 @@ jobs:
           TARGET: ${{ matrix.target }}
           SECONDS_EACH: ${{ inputs.seconds || 300 }}
         run: |
-          uv sync --locked --all-extras --dev
-          uv run --locked python "$TARGET" -max_total_time="$SECONDS_EACH"
+          # No dependency is built from source; only the project itself, see actions/python.
+          name=$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["name"])')
+          uv sync --locked --no-build --no-binary-package "$name" --all-extras --dev
+          uv run --locked --no-build --no-binary-package "$name" python "$TARGET" -max_total_time="$SECONDS_EACH"
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         if: inputs.stack == 'ts'
