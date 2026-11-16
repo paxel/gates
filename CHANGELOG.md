@@ -15,6 +15,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `release-gate.yml` reads the SonarQube Cloud findings of every caller that has a
   `sonar-project.properties` and fails when they cannot be read; the weekly Security run
   uses it too ([gate-1024](https://github.com/paxel/gates/issues/29)).
+- `sonar.yml` fails on every push and pull request while SonarQube Cloud has an open issue or
+  hotspot that is not accepted; a pull request is measured on its own findings and on those of
+  its target branch ([gate-1025](https://github.com/paxel/gates/issues/30)).
 
 ### Changed
 

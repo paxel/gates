@@ -158,6 +158,22 @@ class AlertsGateTest(unittest.TestCase):
             "can go: SonarQube Cloud python:S1 scripts/a.py", self.run_gate([], ignores=ignores, sonar=[])[1]
         )
 
+    def test_the_sonar_list_alone_judges_only_its_own_entries(self) -> None:
+        ignores = ACCEPT + accept("SonarQube Cloud", "python:S1", "scripts/a.py")
+        with tempfile.TemporaryDirectory() as tmp:
+            t = pathlib.Path(tmp)
+            (t / "ignores.toml").write_text(ignores)
+            (t / "sonar.jsonl").write_text(json.dumps(issue("python:S1", "scripts/b.py")) + "\n")
+            out = StringIO()
+            with redirect_stdout(out):
+                code = main(
+                    ["--sonar", str(t / "sonar.jsonl"), "--ignores", str(t / "ignores.toml")], today=TODAY
+                )
+        self.assertEqual(code, 1)
+        self.assertNotIn("Scorecard", out.getvalue())
+        self.assertIn("the entry can go: SonarQube Cloud python:S1 scripts/a.py", out.getvalue())
+        self.assertIn("\n1 SonarQube Cloud findings open, 1 blocking", out.getvalue())
+
     def test_an_unreadable_sonar_list_is_exit_2(self) -> None:
         with tempfile.TemporaryDirectory() as tmp, redirect_stderr(StringIO()):
             t = pathlib.Path(tmp)
@@ -205,6 +221,8 @@ class AlertsGateTest(unittest.TestCase):
             missing = str(pathlib.Path(tmp) / "missing")
             self.assertEqual(main(["--code", missing, "--secrets", missing, "--ignores", missing]), 2)
             self.assertEqual(main(["--code", missing, "--ignores", missing]), 2)
+            self.assertEqual(main(["--code", missing, "--sonar", missing, "--ignores", missing]), 2)
+            self.assertEqual(main(["--ignores", missing]), 2)
 
 
 if __name__ == "__main__":

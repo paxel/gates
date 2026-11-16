@@ -42,9 +42,9 @@ issue in every repository that drifts from the standard.
 | `java.yml`         | formatting, Error Prone, SpotBugs, tests, coverage ratchet                |
 | `content.yml`      | the checks for formulas, scoop manifests, skills and static sites         |
 | `codeql.yml`       | CodeQL for the repo's languages and its workflows                         |
-| `sonar.yml`        | SonarQube Cloud with the coverage of the stack workflows                  |
+| `sonar.yml`        | SonarQube Cloud with the measured coverage; fails on unaccepted findings  |
 | `fuzz.yml`         | the repo's fuzz targets on a schedule                                     |
-| `release-gate.yml` | open alerts, SonarQube Cloud findings, vulnerabilities, licences, CHANGELOG |
+| `release-gate.yml` | alerts, SonarQube Cloud findings, vulnerabilities, licences, CHANGELOG    |
 | `provenance.yml`   | attestation, Sigstore bundle and SBOM for every release file              |
 
 ## Licence

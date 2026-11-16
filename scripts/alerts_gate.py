@@ -25,8 +25,9 @@ unless an [[IgnoredAlerts]] entry with tool "SonarQube Cloud" names its rule (as
 Cloud writes it, e.g. pythonsecurity:S8707) and its file. Nothing is marked in SonarQube
 Cloud's web UI.
 
-The secret list is required: GITHUB_TOKEN cannot read it, and a gate that could not read it
-must not pass.
+The secret list is required beside the code-scanning one: GITHUB_TOKEN cannot read it, and a
+gate that could not read it must not pass. CI's sonar job passes --sonar alone, right after
+the scan; then only the SonarQube Cloud findings and their entries are judged.
 
 Exit 0: nothing blocks. Exit 1: something blocks. Exit 2: an input cannot be read.
 """
@@ -131,13 +132,18 @@ def describe_sonar(finding: dict[str, Any]) -> str:
     return f"{SONAR} {rule} ({kind}, {severity}) {where} {finding.get('message', '')}"
 
 
+def source_of(key: Key) -> str:
+    return {SONAR: "sonar", "secret-scanning": "leaks"}.get(key[0], "code")
+
+
 def gate(
-    code: list[dict[str, Any]],
-    leaks: list[dict[str, Any]],
+    code: list[Finding] | None,
+    leaks: list[Finding] | None,
     ignores: dict[str, Any],
     today: datetime.date,
-    sonar: list[dict[str, Any]] | None = None,
+    sonar: list[Finding] | None = None,
 ) -> tuple[list[str], int]:
+    """The lines to print and how many of them block; a list that is None was not read."""
     lines: list[str] = []
     blocking = 0
     entries: dict[Key, dict[str, Any]] = {}
@@ -152,9 +158,12 @@ def gate(
                 entries[key] = entry
     seen: set[Key] = set()
     pathless: set[Key] = set()
-    lists: list[Source] = [(code, code_key, describe_code), (leaks, leak_key, describe_leak)]
-    if sonar is not None:
-        lists.append((sonar, sonar_key, describe_sonar))
+    read = {"code": code is not None, "leaks": leaks is not None, "sonar": sonar is not None}
+    lists: list[Source] = [
+        (code or [], code_key, describe_code),
+        (leaks or [], leak_key, describe_leak),
+        (sonar or [], sonar_key, describe_sonar),
+    ]
     for alerts, key_of, describe in lists:
         for alert in alerts:
             key = key_of(alert)
@@ -171,29 +180,35 @@ def gate(
         lines.append(f"BAD ENTRY: IgnoredAlerts {name(key)}: no path, but the finding is in a file")
         blocking += 1
     for key in entries:
-        # Without the SonarQube Cloud list nothing is known about its entries.
-        if key not in seen and key not in pathless and (sonar is not None or key[0] != SONAR):
+        # Nothing is known about the entries of a list that was not read.
+        if key not in seen and key not in pathless and read[source_of(key)]:
             lines.append(f"no open alert, the entry can go: {name(key)}")
-    counted = f"{len(code)} code-scanning and {len(leaks)} secret-scanning alerts"
+    counted = []
+    if code is not None and leaks is not None:
+        counted.append(f"{len(code)} code-scanning and {len(leaks)} secret-scanning alerts")
     if sonar is not None:
-        counted += f" and {len(sonar)} SonarQube Cloud findings"
-    lines.append(f"{counted} open, {blocking} blocking")
+        counted.append(f"{len(sonar)} SonarQube Cloud findings")
+    lines.append(f"{' and '.join(counted)} open, {blocking} blocking")
     return lines, blocking
 
 
 def main(argv: Sequence[str], today: datetime.date | None = None) -> int:
     parser = argparse.ArgumentParser(prog="alerts_gate.py")
-    parser.add_argument("--code", required=True)
-    parser.add_argument("--secrets", dest="leaks", required=True)
+    parser.add_argument("--code")
+    parser.add_argument("--secrets", dest="leaks")
     parser.add_argument("--ignores", required=True)
     parser.add_argument("--sonar", help="SonarQube Cloud's open issues and hotspots to review")
     try:
         args = parser.parse_args(argv)
     except SystemExit:
         return 2
+    alerts = bool(args.code) and bool(args.leaks)
+    if (args.code or args.leaks or not args.sonar) and not alerts:
+        print("pass --code and --secrets, --sonar, or all three", file=sys.stderr)
+        return 2
     try:
-        code = read_jsonl(args.code)
-        leaks = read_jsonl(args.leaks)
+        code = read_jsonl(args.code) if alerts else None
+        leaks = read_jsonl(args.leaks) if alerts else None
         sonar = read_jsonl(args.sonar) if args.sonar else None
         with open(args.ignores, "rb") as f:
             ignores = tomllib.load(f)
