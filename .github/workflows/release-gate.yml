@@ -65,8 +65,9 @@ jobs:
           # The default branch is what Scorecard, CodeQL and Sonar analyse; a release is cut from it.
           gh api --paginate "repos/$REPO/code-scanning/alerts?ref=refs/heads/$BRANCH&state=open&per_page=100" \
             --jq '.[]' > code.jsonl
+          # The API returns the leaked value in .secret; it never reaches the disk.
           GH_TOKEN="$ALERTS_TOKEN" gh api --paginate "repos/$REPO/secret-scanning/alerts?state=open&per_page=100" \
-            --jq '.[]' > secrets.jsonl
+            --jq '.[] | del(.secret)' > secrets.jsonl
       - name: Gate
         working-directory: src
         env:
