@@ -6,6 +6,7 @@ license = "MIT"
 publish = false
 
 # The planted finding: time 0.1.43 has RUSTSEC-2020-0071. The lockfile pins it; the OSV
-# gate must fail.
+# gate must fail. Both files are stored as *.planted, and the self-test copies them into
+# place, so GitHub does not take the fixture for a project with a vulnerable dependency.
 [dependencies]
 time = "=0.1.43"
