@@ -127,6 +127,57 @@ class ListingTest(unittest.TestCase):
             found = audit.settings("paxel", "x")
         self.assertIsNone(found["secret_scanning"])
         self.assertEqual(found["vulnerability_alerts"], "off")
+        self.assertEqual(
+            sorted(found["unreadable"]),
+            [
+                "automated_security_fixes",
+                "private_vulnerability_reporting",
+                "push_protection",
+                "secret_scanning",
+            ],
+        )
+
+    def test_a_setting_github_did_not_answer_for_is_unreadable_not_off(self) -> None:
+        denied = {"_error": "gh: Resource not accessible by personal access token (HTTP 403)"}
+        answers: dict[str, Any] = {
+            # No security_and_analysis: what a token without admin access gets.
+            "repos/paxel/x": {"name": "x"},
+            "repos/paxel/x/private-vulnerability-reporting": denied,
+            "repos/paxel/x/automated-security-fixes": denied,
+        }
+        with (
+            mock.patch.object(audit, "gh", side_effect=lambda _api, path: answers[path]),
+            mock.patch.object(audit, "status", return_value="HTTP/2.0 403 Forbidden"),
+        ):
+            found = audit.settings("paxel", "x")
+        self.assertEqual(
+            sorted(found["unreadable"]),
+            [
+                "automated_security_fixes",
+                "private_vulnerability_reporting",
+                "push_protection",
+                "secret_scanning",
+                "vulnerability_alerts",
+            ],
+        )
+        self.assertIn("HTTP 403", found["unreadable"]["automated_security_fixes"])
+        self.assertIn("admin access", found["unreadable"]["secret_scanning"])
+        self.assertEqual(found["unreadable"]["vulnerability_alerts"], "HTTP/2.0 403 Forbidden")
+
+    def test_a_404_for_fixes_and_alerts_is_off_not_unreadable(self) -> None:
+        answers: dict[str, Any] = {
+            "repos/paxel/x": {"security_and_analysis": {}},
+            "repos/paxel/x/private-vulnerability-reporting": {"enabled": False},
+            "repos/paxel/x/automated-security-fixes": {"_error": "gh: Not Found (HTTP 404)"},
+        }
+        with (
+            mock.patch.object(audit, "gh", side_effect=lambda _api, path: answers[path]),
+            mock.patch.object(audit, "status", return_value="HTTP/2.0 404 Not Found"),
+        ):
+            found = audit.settings("paxel", "x")
+        self.assertNotIn("unreadable", found)
+        self.assertEqual(found["vulnerability_alerts"], "off")
+        self.assertIsNone(found["automated_security_fixes"])
 
     def test_latest_release_is_its_commit_and_tag(self) -> None:
         with mock.patch.object(audit, "gh", side_effect=[{"tag_name": "v1.0.0"}, {"sha": "abc"}]):

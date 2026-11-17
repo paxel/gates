@@ -71,19 +71,57 @@ def active(owner: str, year: int) -> list[dict[str, Any]]:
     ]
 
 
+def failure(answer: Any) -> str | None:
+    """Why an answer of gh() is no answer, or None if it is one."""
+    if isinstance(answer, dict):
+        return str(answer["_error"]) if "_error" in answer else None
+    return f"unexpected answer: {str(answer)[:80]}"
+
+
 def settings(owner: str, name: str) -> dict[str, Any]:
+    """The repository's security settings. A setting GitHub did not answer for is listed
+    under "unreadable" with the reason, so a failed read is never reported as "off"."""
+    found: dict[str, Any] = {}
+    unreadable: dict[str, str] = {}
+
     repo = gh("api", f"repos/{owner}/{name}")
-    saa = (repo or {}).get("security_and_analysis") or {} if isinstance(repo, dict) else {}
+    error = failure(repo)
+    raw = repo.get("security_and_analysis") if error is None else None
+    if error is None and not isinstance(raw, dict):
+        # GitHub leaves the field out for a token without admin access to the repository.
+        error = "no security_and_analysis in the answer (the token needs admin access)"
+    saa: dict[str, Any] = raw if isinstance(raw, dict) else {}
+    for key, field in (
+        ("secret_scanning", "secret_scanning"),
+        ("push_protection", "secret_scanning_push_protection"),
+    ):
+        if error is None:
+            found[key] = (saa.get(field) or {}).get("status")
+        else:
+            found[key] = None
+            unreadable[key] = error
+
     pvr = gh("api", f"repos/{owner}/{name}/private-vulnerability-reporting")
+    error = failure(pvr)
+    found["private_vulnerability_reporting"] = pvr.get("enabled") if error is None else None
+    if error is not None:
+        unreadable["private_vulnerability_reporting"] = error
+
+    # GitHub answers 404 for automated security fixes and for the alerts when they are off.
     fixes = gh("api", f"repos/{owner}/{name}/automated-security-fixes")
+    error = failure(fixes)
+    found["automated_security_fixes"] = fixes.get("enabled") if error is None else None
+    if error is not None and "404" not in error:
+        unreadable["automated_security_fixes"] = error
+
     alerts = status(f"repos/{owner}/{name}/vulnerability-alerts")
-    return {
-        "secret_scanning": (saa.get("secret_scanning") or {}).get("status"),
-        "push_protection": (saa.get("secret_scanning_push_protection") or {}).get("status"),
-        "private_vulnerability_reporting": pvr.get("enabled") if isinstance(pvr, dict) else None,
-        "automated_security_fixes": fixes.get("enabled") if isinstance(fixes, dict) else None,
-        "vulnerability_alerts": "on" if "204" in alerts else "off",
-    }
+    found["vulnerability_alerts"] = "on" if " 204" in alerts else "off"
+    if " 204" not in alerts and " 404" not in alerts:
+        unreadable["vulnerability_alerts"] = alerts
+
+    if unreadable:
+        found["unreadable"] = unreadable
+    return found
 
 
 def last_commit(root: pathlib.Path) -> str:

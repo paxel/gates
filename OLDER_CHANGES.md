@@ -2,6 +2,14 @@
 
 Changes of released versions before the current one, newest first.
 
+## [1.1.1] - 2026-11-17
+
+### Fixed
+
+- SonarQube Cloud shows the coverage of a Rust repository again: `rust.yml` names the covered
+  files relative to the repository, not with the runner's absolute paths
+  ([gate-1032](https://github.com/paxel/gates/issues/41)).
+
 ## [1.1.0] - 2026-11-16
 
 ### Added

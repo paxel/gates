@@ -141,8 +141,16 @@ SETTING_KEYS: dict[str, Callable[[dict[str, Any]], bool]] = {
 
 
 def k_setting(repo: Repo, d: dict[str, Any], s: dict[str, Any], c: Context) -> tuple[bool, str]:
-    off = [k for k in d.get("keys") or [] if not SETTING_KEYS[k](repo.settings)]
-    return (not off), ("off: " + ", ".join(off)) if off else ""
+    keys = d.get("keys") or []
+    unreadable: dict[str, str] = repo.settings.get("unreadable") or {}
+    unread = [f"{k} ({unreadable[k]})" for k in keys if k in unreadable]
+    off = [k for k in keys if k not in unreadable and not SETTING_KEYS[k](repo.settings)]
+    detail = []
+    if off:
+        detail.append("off: " + ", ".join(off))
+    if unread:
+        detail.append("not readable: " + ", ".join(unread))
+    return (not off and not unread), "; ".join(detail)
 
 
 def k_default_branch(repo: Repo, d: dict[str, Any], s: dict[str, Any], c: Context) -> tuple[bool, str]:
