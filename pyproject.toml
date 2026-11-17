@@ -1,6 +1,6 @@
 [project]
 name = "gates"
-version = "1.1.0"
+version = "1.1.1"
 description = "Shared security and quality gates for paxel's repositories"
 requires-python = ">=3.12"
 license = "MIT"
