@@ -198,6 +198,26 @@ class AuditChecksTest(unittest.TestCase):
         self.assertEqual(res["private-vulnerability-reporting"].state, "present")
         self.assertEqual(res["default-branch"].state, "drift")
 
+    def test_a_setting_that_could_not_be_read_says_so(self) -> None:
+        settings = {
+            "secret_scanning": None,
+            "push_protection": None,
+            "vulnerability_alerts": "off",
+            "automated_security_fixes": True,
+            "private_vulnerability_reporting": True,
+            "unreadable": {"secret_scanning": "HTTP 403", "push_protection": "HTTP 403"},
+        }
+        res = self.results(self.repo(settings=settings))
+        unread = [r for r in res.values() if "not readable" in r.detail]
+        self.assertEqual(len(unread), 1)
+        self.assertEqual(unread[0].state, "drift")
+        self.assertIn(
+            "not readable: secret_scanning (HTTP 403), push_protection (HTTP 403)", unread[0].detail
+        )
+        self.assertNotIn("off:", unread[0].detail)
+        off = [r for r in res.values() if r.detail == "off: vulnerability_alerts"]
+        self.assertEqual(len(off), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
