@@ -69,7 +69,7 @@ source of the version.
 **Audit (Q16).** A weekly workflow here checks every repository, publishes the report on
 Pages, opens or updates one issue per drifting repository and goes red.
 
-**Rollout (Q18, Q19).** gates first, wipTracker as the pilot, then the most urgent findings,
+**Rollout (Q18, Q19).** gates first, pixpixpix as the pilot, then the most urgent findings,
 the repositories without app code last; per repository a short grill, tickets in a `gates`
 milestone, a long walk and a pull request the maintainer merges.
 
