@@ -46,8 +46,9 @@ than 90 days, whatever its activity. The finding ends by itself on 2027-02-13.""
 tool = "Scorecard"
 rule = "VulnerabilitiesID"
 ignoreUntil = 2027-05-14
-reason = """fixtures/vulns/red holds a vulnerable dependency on purpose: the self-test proves the \
-OSV gate fails on it. The gate's own scan excludes the fixtures; Scorecard does not."""
+reason = """picomatch 4.0.7 (GHSA-fc5q-39xc-vjpf) comes into fixtures/ts/clean and fixtures/ts/red \
+through vitest and vite, and no picomatch release fixes it. The fixtures are test projects \
+of the self-test, never shipped; the gate's own scan excludes them, Scorecard does not."""
 
 [[IgnoredAlerts]]
 tool = "SonarQube Cloud"
