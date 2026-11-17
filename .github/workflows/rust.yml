@@ -57,6 +57,13 @@ jobs:
           test-wrapper: ${{ inputs.test-wrapper }}
           features: ${{ inputs.features }}
           coverage: ${{ inputs.coverage }}
+      # tarpaulin names every file with the runner's absolute path below src/; the sonar job
+      # has the caller at the workspace root and finds only paths relative to the repository.
+      - name: Name the covered files relative to the repository
+        if: inputs.coverage != ''
+        env:
+          COVERAGE: ${{ inputs.root == '.' && 'src' || format('src/{0}', inputs.root) }}/coverage
+        run: sed -i "s|^SF:$GITHUB_WORKSPACE/src/|SF:|" "$COVERAGE"/*.lcov
       - name: Keep the coverage for SonarQube Cloud
         if: inputs.coverage != ''
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

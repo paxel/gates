@@ -10,7 +10,7 @@
 #           "release"  repositories that publish releases (code repositories)
 # detect:   how the audit sees it; see scripts/audit/checks.py for each kind.
 
-version = "1.1.0"
+version = "1.1.1"
 default_branch = "summer"
 
 [active]
