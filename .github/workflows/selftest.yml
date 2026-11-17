@@ -86,6 +86,11 @@ jobs:
           path: .gates
           persist-credentials: false
 
+      # The planted manifest and lockfile are stored under names GitHub's dependency graph
+      # does not read, or Dependabot reports the planted finding and proposes to fix it.
+      - name: Put the planted manifest and lockfile in place
+        if: matrix.case == 'vulns'
+        run: for f in fixtures/vulns/red/*.planted; do cp "$f" "${f%.planted}"; done
       - id: vulns
         if: matrix.case == 'vulns'
         continue-on-error: true
