@@ -31,7 +31,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-SKIP_DIRS = {".git", "target", "node_modules", "build", ".dart_tool", ".gates", "vendor", "fuzz"}
+SKIP_DIRS = {".git", "target", "node_modules", "build", ".dart_tool", ".gates", "vendor"}
 
 
 @dataclass(frozen=True)

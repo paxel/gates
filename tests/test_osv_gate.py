@@ -82,6 +82,28 @@ class OsvGateTest(unittest.TestCase):
         }
         self.assertEqual(self.gate(self.results([own]))[0], 0)
 
+    def test_the_fuzz_crate_is_the_repos_own_package_too(self) -> None:
+        sub = self.root / "fuzz"
+        sub.mkdir()
+        (sub / "Cargo.toml").write_text('[package]\nname = "x-fuzz"\n')
+        (sub / "Cargo.lock").write_text("")
+        own = {
+            "package": {"name": "x-fuzz", "version": "0.0.0"},
+            "licenses": ["UNKNOWN"],
+            "license_violations": ["UNKNOWN"],
+        }
+        data = self.results([self.pkg()])
+        data["results"].append({"source": {"path": str(sub / "Cargo.lock")}, "packages": [own]})
+        self.assertEqual(self.gate(data)[0], 0)
+
+    def test_an_acceptance_in_fuzz_needs_its_reason_and_date_too(self) -> None:
+        sub = self.root / "fuzz"
+        sub.mkdir()
+        (sub / "osv-scanner.toml").write_text('[[IgnoredVulns]]\nid = "RUSTSEC-1"\n')
+        code, out = self.gate(self.results([self.pkg()]))
+        self.assertEqual(code, 1)
+        self.assertIn("BAD ENTRY: fuzz/osv-scanner.toml", out)
+
     def test_a_manifest_without_a_scanned_lockfile_blocks(self) -> None:
         sub = self.root / "app"
         sub.mkdir()
