@@ -28,6 +28,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   ([gate-1038](https://github.com/paxel/gates/issues/51)).
 - A container image badge and its cosign badge may follow the fixed badge row
   ([gate-1041](https://github.com/paxel/gates/issues/54)).
+- The shared ruff config sets no target version; ruff reads `requires-python`, so a package
+  that supports an older Python gets no rewrites it cannot run
+  ([gate-1044](https://github.com/paxel/gates/issues/57)).
 
 ---
 
