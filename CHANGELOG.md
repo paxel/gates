@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [1.2.0]
 
+### Added
+
+- `fuzz.yml` builds Rust targets unoptimised with `rust-dev`, replays the saved crashes of
+  `fuzz/regressions/<target>` before fuzzing and runs the caller's `prepare` command once the
+  dependencies are installed ([gate-1037](https://github.com/paxel/gates/issues/50)).
+
 ---
 
 Historical changes have been moved to [OLDER_CHANGES.md](OLDER_CHANGES.md).
