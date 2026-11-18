@@ -26,6 +26,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The Java build settings are asked only of a `pom.xml` with Java sources beside it; a sample
   project without code no longer fails the config check and the audit
   ([gate-1038](https://github.com/paxel/gates/issues/51)).
+- A container image badge and its cosign badge may follow the fixed badge row
+  ([gate-1041](https://github.com/paxel/gates/issues/54)).
 
 ---
 

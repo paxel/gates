@@ -93,14 +93,14 @@ id = "site"
 detect = ["index.html", "repo/index.html"]
 
 # The fixed badge row, in this order (Q9). Rust repositories add panic-free and unsafe after
-# License. Distribution badges may follow; nothing else.
+# License. Distribution badges may follow (a container image and its signature count); nothing else.
 [badges]
 row = ["CI", "Security", "CodeQL", "Scorecard", "Sonar quality gate", "Coverage", "Fuzz", "Release", "License"]
 rust = ["panic-free", "unsafe"]
 content_row = ["CI", "Security", "CodeQL", "Scorecard", "License"]
 distribution = [
   "crates.io", "docs.rs", "npm", "PyPI", "Maven Central", "pkg.go.dev", "F-Droid", "Homebrew",
-  "Scoop", "platforms", "docs",
+  "Scoop", "platforms", "docs", "Image", "cosign",
 ]
 
 # Scorecard findings that cannot be fixed by a single maintainer; every repository accepts
