@@ -7,6 +7,9 @@ inputs:
   modules:
     description: One line per module, "<part> <directory>", e.g. "go .".
     default: go .
+  cross:
+    description: Further systems every module is built and vetted for, one "GOOS/GOARCH" per line, e.g. "windows/amd64".
+    default: ""
 runs:
   using: composite
   steps:
@@ -62,3 +65,23 @@ runs:
           echo "::endgroup::"
         done <<< "$MODULES"
         python3 "$GITHUB_WORKSPACE/.gates/scripts/coverage_ratchet.py" --floors coverage-floors.toml --check "$@"
+
+    # The tests ran on Linux; a file that only another system compiles is at least built there.
+    - name: Build and vet for the other systems
+      if: inputs.cross != ''
+      shell: bash
+      working-directory: ${{ inputs.root }}
+      env:
+        MODULES: ${{ inputs.modules }}
+        CROSS: ${{ inputs.cross }}
+      run: |
+        while read -r _ dir; do
+          [ -z "$dir" ] && continue
+          while read -r pair; do
+            [ -z "$pair" ] && continue
+            echo "::group::$pair ($dir)"
+            (cd "$dir" && GOOS="${pair%/*}" GOARCH="${pair#*/}" go build ./...)
+            (cd "$dir" && GOOS="${pair%/*}" GOARCH="${pair#*/}" go vet ./...)
+            echo "::endgroup::"
+          done <<< "$CROSS"
+        done <<< "$MODULES"

@@ -13,6 +13,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   dependencies are installed ([gate-1037](https://github.com/paxel/gates/issues/50)).
 - `codeql.yml` takes the caller's CodeQL config with `config-file`
   ([gate-1039](https://github.com/paxel/gates/issues/52)).
+- `go.yml` builds and vets every module for the systems named in `cross`
+  ([gate-1042](https://github.com/paxel/gates/issues/55)).
 
 ### Changed
 
