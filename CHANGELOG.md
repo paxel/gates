@@ -17,6 +17,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   ([gate-1042](https://github.com/paxel/gates/issues/55)).
 - `java.yml` hands the compiled classes to the SonarQube Cloud scan as `coverage/<part>.classes`
   and `coverage/<part>.test-classes` ([gate-1043](https://github.com/paxel/gates/issues/56)).
+- `actions/ratchet` checks parts of `coverage-floors.toml` in a job of the repository's own; the
+  audit holds its pin to the latest gates release like a shared workflow's
+  ([gate-1040](https://github.com/paxel/gates/issues/53)).
 
 ### Changed
 

@@ -22,6 +22,8 @@ import rust_lints  # noqa: E402
 SKIP = {".git", "target", "node_modules", "build", ".dart_tool", "fuzz", "fixtures", ".gates", "vendor"}
 SHA = re.compile(r"@[0-9a-f]{40}\s+#\s*\S+")
 GATES_USE = re.compile(r"uses:\s*paxel/gates/\.github/workflows/([\w.-]+\.yml)@([0-9a-f]{40})")
+# A composite action of gates used in a job of the repository's own, pinned like a workflow.
+GATES_ACTION = re.compile(r"uses:\s*paxel/gates/actions/([\w.-]+)@([0-9a-f]{40})")
 ECOSYSTEM = {"rust": "cargo", "dart": "pub", "go": "gomod", "ts": "npm", "python": "uv", "java": "maven"}
 
 
@@ -324,7 +326,12 @@ def k_permissions(repo: Repo, d: dict[str, Any], s: dict[str, Any], c: Context) 
 
 
 def k_gates_version(repo: Repo, d: dict[str, Any], s: dict[str, Any], c: Context) -> tuple[bool, str]:
-    refs = {m.group(2) for t in workflows(repo.root).values() for m in GATES_USE.finditer(t)}
+    refs = {
+        m.group(2)
+        for t in workflows(repo.root).values()
+        for pattern in (GATES_USE, GATES_ACTION)
+        for m in pattern.finditer(t)
+    }
     if repo.name == "gates":
         return True, "gates itself"
     if not refs:
