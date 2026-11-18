@@ -8,6 +8,7 @@ configs/<stack>/required.toml lists what must be there:
     files = ["analysis_options.yaml"]          # the first one that exists is read
     patterns = ['strict-casts:\\s*true']       # each must match somewhere in it
     why = "strict analysis (Q14)"
+    beside = ["src/main/java"]                 # optional: asked only of a directory that has one of these
 
 Exit 0: every requirement holds. Exit 1: a file is missing or a setting is not there. Exit 2:
 the requirements cannot be read.
@@ -27,6 +28,9 @@ from typing import Any
 def check(directory: pathlib.Path, requirements: list[dict[str, Any]]) -> list[str]:
     problems: list[str] = []
     for req in requirements:
+        beside = [str(b) for b in req.get("beside") or []]
+        if beside and not any((directory / b).is_dir() for b in beside):
+            continue
         names = [str(n) for n in req.get("files") or []]
         found = next((directory / n for n in names if (directory / n).is_file()), None)
         why = str(req.get("why", ""))

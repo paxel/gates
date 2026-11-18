@@ -12,6 +12,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `fuzz/regressions/<target>` before fuzzing and runs the caller's `prepare` command once the
   dependencies are installed ([gate-1037](https://github.com/paxel/gates/issues/50)).
 
+### Changed
+
+- The Java build settings are asked only of a `pom.xml` with Java sources beside it; a sample
+  project without code no longer fails the config check and the audit
+  ([gate-1038](https://github.com/paxel/gates/issues/51)).
+
 ---
 
 Historical changes have been moved to [OLDER_CHANGES.md](OLDER_CHANGES.md).
