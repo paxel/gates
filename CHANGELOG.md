@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `fuzz.yml` builds Rust targets unoptimised with `rust-dev`, replays the saved crashes of
   `fuzz/regressions/<target>` before fuzzing and runs the caller's `prepare` command once the
   dependencies are installed ([gate-1037](https://github.com/paxel/gates/issues/50)).
+- `codeql.yml` takes the caller's CodeQL config with `config-file`
+  ([gate-1039](https://github.com/paxel/gates/issues/52)).
 
 ### Changed
 
