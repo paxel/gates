@@ -15,6 +15,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   ([gate-1039](https://github.com/paxel/gates/issues/52)).
 - `go.yml` builds and vets every module for the systems named in `cross`
   ([gate-1042](https://github.com/paxel/gates/issues/55)).
+- `java.yml` hands the compiled classes to the SonarQube Cloud scan as `coverage/<part>.classes`
+  and `coverage/<part>.test-classes` ([gate-1043](https://github.com/paxel/gates/issues/56)).
 
 ### Changed
 
