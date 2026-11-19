@@ -31,6 +31,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The shared ruff config sets no target version; ruff reads `requires-python`, so a package
   that supports an older Python gets no rewrites it cannot run
   ([gate-1044](https://github.com/paxel/gates/issues/57)).
+- The sonar job judges a finding by `code-scanning-ignores.toml` alone: SonarQube Cloud's
+  quality gate no longer fails it, so an accepted finding on a changed line passes
+  ([gate-1045](https://github.com/paxel/gates/issues/59)).
 
 ---
 
