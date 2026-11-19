@@ -1,9 +1,13 @@
+# Asked of a pom.xml that has Java sources beside it: a sample project of specs and
+# configuration has nothing for a compiler or an analyser to look at.
 [[require]]
 files = ["pom.xml"]
+beside = ["src/main/java", "src/test/java"]
 patterns = ['error_prone_core', '-Xplugin:ErrorProne', '<arg>-Werror</arg>', 'spotbugs-maven-plugin', 'jacoco-maven-plugin']
 why = "Error Prone and SpotBugs with warnings failing the build, JaCoCo (Q14), configs/java/pom-snippet.xml"
 
 [[require]]
 files = [".mvn/jvm.config"]
+beside = ["src/main/java", "src/test/java"]
 patterns = ['--add-exports jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED']
 why = "Error Prone needs the javac exports"

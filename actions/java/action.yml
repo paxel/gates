@@ -44,6 +44,10 @@ runs:
           python3 "$GITHUB_WORKSPACE/.gates/scripts/to_lcov.py" jacoco "$dir/target/site/jacoco/jacoco.xml" > "coverage/$part.lcov"
           # SonarQube Cloud reads Java coverage as JaCoCo XML.
           cp "$dir/target/site/jacoco/jacoco.xml" "coverage/$part.jacoco.xml"
+          # It refuses Java without the compiled classes (sonar.java.binaries).
+          mkdir -p "coverage/$part.classes" "coverage/$part.test-classes"
+          cp -r "$dir/target/classes/." "coverage/$part.classes/"
+          [ ! -d "$dir/target/test-classes" ] || cp -r "$dir/target/test-classes/." "coverage/$part.test-classes/"
           set -- "$@" --part "$part"
           echo "::endgroup::"
         done <<< "$MODULES"

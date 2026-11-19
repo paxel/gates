@@ -1,8 +1,9 @@
 # The strict ruff config of every Python repository of the standard (Q14): pycodestyle,
-# pyflakes, isort, bugbear, the bandit security rules and pyupgrade. A repository extends it
-# with `extend = ".gates-configs/python/ruff.toml"` or copies it; the audit checks the rules.
+# pyflakes, isort, bugbear, the bandit security rules and pyupgrade. A repository copies
+# the rule selection; the audit checks the rules. No target version here: ruff takes it from
+# `requires-python` in pyproject.toml, so pyupgrade never asks for syntax the project's oldest
+# Python lacks.
 line-length = 110
-target-version = "py312"
 
 [lint]
 select = ["E", "F", "W", "I", "B", "S", "UP"]

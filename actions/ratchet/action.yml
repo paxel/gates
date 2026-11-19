@@ -1,0 +1,28 @@
+name: Coverage ratchet
+description: >-
+  Checks parts of coverage-floors.toml against their floors, for a part a job of the
+  repository's own measures. The stack workflows run the ratchet for their parts themselves.
+inputs:
+  floors:
+    description: The floors file, relative to the workspace.
+    default: coverage-floors.toml
+  parts:
+    description: The parts to check, one name per line; their lcov files are in place.
+    required: true
+runs:
+  using: composite
+  steps:
+    # A caller pins this action like a shared workflow, so the script is the one of that commit.
+    - name: Coverage ratchet
+      shell: bash
+      env:
+        FLOORS: ${{ inputs.floors }}
+        PARTS: ${{ inputs.parts }}
+        SCRIPT: ${{ github.action_path }}/../../scripts/coverage_ratchet.py
+      run: |
+        set --
+        while read -r part; do
+          [ -z "$part" ] || set -- "$@" --part "$part"
+        done <<< "$PARTS"
+        [ $# -gt 0 ] || { echo "::error::no part named: the ratchet must not pass with nothing checked"; exit 1; }
+        python3 "$SCRIPT" --floors "$FLOORS" --check "$@"

@@ -103,6 +103,20 @@ class AuditChecksTest(unittest.TestCase):
         self.assertEqual(res.state, "drift")
         self.assertIn("behind v1.0.0", res.detail)
 
+    def test_an_old_pin_of_a_gates_action_is_drift_too(self) -> None:
+        self.write(
+            {
+                ".github/workflows/ci.yml": "uses: paxel/gates/.github/workflows/vulns.yml@"
+                + SHA
+                + " # v1.0.0\n      - uses: paxel/gates/actions/ratchet@"
+                + "b" * 40
+                + " # v0.9.0\n"
+            }
+        )
+        res = self.results(self.repo())["gates-current"]
+        self.assertEqual(res.state, "drift")
+        self.assertIn("behind v1.0.0", res.detail)
+
     def test_actions_must_be_pinned_with_a_version_comment(self) -> None:
         self.write(
             {
@@ -172,6 +186,9 @@ class AuditChecksTest(unittest.TestCase):
         self.assertEqual(res.state, "drift")
         self.assertIn("outside the row", res.detail)
         self.write({"README.md": badges + "![crates.io](https://img.shields.io/crates/v/x)\n"})
+        self.assertEqual(self.results(self.repo())["badges"].state, "present")
+        image = "![Image](https://img.shields.io/badge/image-ghcr.io-blue) ![cosign](https://img.shields.io/badge/cosign-signed-success)\n"
+        self.write({"README.md": badges + image})
         self.assertEqual(self.results(self.repo())["badges"].state, "present")
 
     def test_an_old_toolchain_pin_is_drift(self) -> None:

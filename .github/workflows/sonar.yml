@@ -4,7 +4,8 @@ name: SonarQube Cloud
 # The caller runs it after its stack jobs (needs:), which upload `coverage-<stack>`
 # artifacts into coverage/; sonar-project.properties points at those files
 # (coverage/<part>.lcov for Rust, Dart and TS, coverage/<part>.xml for Python,
-# coverage/<part>.jacoco.xml for Java, coverage/<part>.out for Go). Callers pin it:
+# coverage/<part>.jacoco.xml for Java (with the compiled classes in coverage/<part>.classes and
+# coverage/<part>.test-classes for sonar.java.binaries and sonar.java.test.binaries), coverage/<part>.out for Go). Callers pin it:
 #   uses: paxel/gates/.github/workflows/sonar.yml@<sha> # vX.Y.Z
 #   secrets: { sonar-token: "${{ secrets.SQ_TOKEN }}" }
 # SonarQube Cloud's quality gate looks at new code only. After the scan the job therefore reads

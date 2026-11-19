@@ -2,6 +2,16 @@
 
 Changes of released versions before the current one, newest first.
 
+## [1.1.2] - 2026-11-17
+
+### Fixed
+
+- The audit reports a GitHub setting it could not read as "not readable", with GitHub's error,
+  instead of "off" ([gate-1035](https://github.com/paxel/gates/issues/47)).
+- The OSV gate treats `fuzz/` like every other directory: the fuzz crate is the repository's
+  own package and needs no licence acceptance, and an acceptance in `fuzz/osv-scanner.toml`
+  needs its reason and date ([gate-1036](https://github.com/paxel/gates/issues/48)).
+
 ## [1.1.1] - 2026-11-17
 
 ### Fixed

@@ -3,6 +3,8 @@ name: CodeQL
 # Shared workflow: CodeQL for the caller's languages and always its workflows. Callers pin it:
 #   uses: paxel/gates/.github/workflows/codeql.yml@<sha> # vX.Y.Z
 #   with: { languages: '["rust"]' }
+# config-file names a CodeQL config in the caller's repository, e.g. to keep vendored bundles
+# and built output out of the analysis with paths-ignore.
 # CodeQL has no Dart analysis; a Dart repository passes '[]' and gets the workflows analysed.
 # The same file is gates' own CodeQL run (push, pull request, weekly) on Python and actions.
 on:
@@ -12,6 +14,10 @@ on:
         description: JSON list of CodeQL languages besides actions, e.g. '["rust","python"]'.
         type: string
         default: "[]"
+      config-file:
+        description: A CodeQL config file in the caller's repository, e.g. .github/codeql.yml.
+        type: string
+        default: ""
   push:
     branches: [summer]
   pull_request:
@@ -54,6 +60,7 @@ jobs:
       - uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           languages: ${{ matrix.language }}
+          config-file: ${{ inputs.config-file }}
           # Go has no build-free mode; every other language here does.
           build-mode: ${{ matrix.language == 'go' && 'autobuild' || 'none' }}
 

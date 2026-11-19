@@ -2,7 +2,6 @@
 # pyflakes, isort, bugbear, the bandit security rules and pyupgrade. A repository extends it
 # with `extend = ".gates-configs/python/ruff.toml"` or copies it; the audit checks the rules.
 line-length = 110
-target-version = "py312"
 
 [lint]
 select = ["E", "F", "W", "I", "B", "S", "UP"]

@@ -5,6 +5,12 @@ name: Fuzz
 #   uses: paxel/gates/.github/workflows/fuzz.yml@<sha> # vX.Y.Z
 #   with: { stack: rust, targets: "parse_clock\nstore_load" }
 #
+# rust-dev builds the Rust targets unoptimised, for a crate whose optimised sanitizer build
+# does not fit the runner's memory. A Rust target with saved crashes in
+# fuzz/regressions/<target> gets them replayed first: a fixed crash that comes back fails at
+# once. prepare is a command run in the caller's tree once the dependencies are installed,
+# before fuzzing, e.g. "npm run build".
+#
 # targets, one per line:
 #   rust    cargo-fuzz target names in fuzz/
 #   go      "<package dir> <FuzzFunc>"
@@ -29,6 +35,14 @@ on:
         type: number
         default: 300
       apt-packages:
+        type: string
+        default: ""
+      rust-dev:
+        description: Build the Rust targets unoptimised (cargo fuzz --dev).
+        type: boolean
+        default: false
+      prepare:
+        description: A command run after the dependencies are installed and before fuzzing.
         type: string
         default: ""
 
@@ -82,10 +96,18 @@ jobs:
           RUSTC_BOOTSTRAP: "1"
           TARGET: ${{ matrix.target }}
           SECONDS_EACH: ${{ inputs.seconds || 300 }}
+          DEV: ${{ inputs.rust-dev }}
+          PREPARE: ${{ inputs.prepare }}
         run: |
           rustup toolchain install
           cargo install cargo-fuzz --locked --version 0.13.2
-          cargo fuzz run "$TARGET" -- -max_total_time="$SECONDS_EACH"
+          [ -z "$PREPARE" ] || bash -c "$PREPARE"
+          set --
+          [ "$DEV" != "true" ] || set -- --dev
+          if [ -d "fuzz/regressions/$TARGET" ]; then
+            cargo fuzz run "$@" "$TARGET" "fuzz/regressions/$TARGET" -- -runs=0
+          fi
+          cargo fuzz run "$@" "$TARGET" -- -max_total_time="$SECONDS_EACH"
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         if: inputs.stack == 'go'
@@ -96,7 +118,9 @@ jobs:
         env:
           TARGET: ${{ matrix.target }}
           SECONDS_EACH: ${{ inputs.seconds || 300 }}
+          PREPARE: ${{ inputs.prepare }}
         run: |
+          [ -z "$PREPARE" ] || bash -c "$PREPARE"
           read -r dir func <<< "$TARGET"
           (cd "$dir" && go test -run='^$' -fuzz="^${func}\$" -fuzztime="${SECONDS_EACH}s" .)
 
@@ -107,10 +131,12 @@ jobs:
         env:
           TARGET: ${{ matrix.target }}
           SECONDS_EACH: ${{ inputs.seconds || 300 }}
+          PREPARE: ${{ inputs.prepare }}
         run: |
           # No dependency is built from source; only the project itself, see actions/python.
           name=$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["name"])')
           uv sync --locked --no-build --no-binary-package "$name" --all-extras --dev
+          [ -z "$PREPARE" ] || bash -c "$PREPARE"
           uv run --locked --no-build --no-binary-package "$name" python "$TARGET" -max_total_time="$SECONDS_EACH"
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -122,8 +148,10 @@ jobs:
         env:
           TARGET: ${{ matrix.target }}
           SECONDS_EACH: ${{ inputs.seconds || 300 }}
+          PREPARE: ${{ inputs.prepare }}
         run: |
           npm ci --ignore-scripts
+          [ -z "$PREPARE" ] || bash -c "$PREPARE"
           npx --no-install jazzer "$TARGET" -- -max_total_time="$SECONDS_EACH"
 
       - name: Java version
@@ -142,7 +170,10 @@ jobs:
           TARGET: ${{ matrix.target }}
           SECONDS_EACH: ${{ inputs.seconds || 300 }}
           JAZZER_FUZZ: "1"
-        run: mvn --batch-mode --no-transfer-progress test -Dtest="$TARGET" -Djazzer.max_duration="${SECONDS_EACH}s"
+          PREPARE: ${{ inputs.prepare }}
+        run: |
+          [ -z "$PREPARE" ] || bash -c "$PREPARE"
+          mvn --batch-mode --no-transfer-progress test -Dtest="$TARGET" -Djazzer.max_duration="${SECONDS_EACH}s"
 
       - name: Unknown stack
         if: ${{ !contains(fromJSON('["rust","go","python","ts","java"]'), inputs.stack || 'python') }}

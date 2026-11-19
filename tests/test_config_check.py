@@ -53,6 +53,15 @@ class ConfigCheckTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("strict-casts", out)
 
+    def test_a_pom_with_java_sources_needs_the_java_settings(self) -> None:
+        code, out = self.run_check("java", {"pom.xml": "<project/>", "src/main/java/A.java": "class A {}"})
+        self.assertEqual(code, 1)
+        self.assertIn("error_prone_core", out)
+
+    def test_a_pom_without_java_sources_is_not_asked(self) -> None:
+        code, out = self.run_check("java", {"pom.xml": "<project/>", "specs/openapi.yaml": "openapi: 3.1.0"})
+        self.assertEqual(code, 0, out)
+
     def test_an_unknown_stack_is_exit_2(self) -> None:
         self.assertEqual(self.run_check("cobol", {})[0], 2)
 

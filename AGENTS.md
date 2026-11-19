@@ -40,7 +40,8 @@ Prefix `gate`, see `docs/agents/ticket-ids.md`.
 ## How a shared workflow finds its scripts
 
 A shared workflow checks the caller out into `src/` and gates, at `job.workflow_sha`, beside it
-into `.gates`, then runs `./.gates/actions/<name>` on `src/<root>`. The scripts are therefore
+into `.gates`, then runs `./.gates/actions/<name>` on `src/<root>`. `actions/ratchet` is the one
+action a caller uses directly, in a job of its own, pinned like a shared workflow. The scripts are therefore
 always the ones of the commit the caller pinned, and no tool that walks the caller's tree
 (ruff, eslint, prettier, mypy, flutter analyze) ever sees gates' files or its red fixtures.
 
