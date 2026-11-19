@@ -8,7 +8,8 @@ name: SonarQube Cloud
 # coverage/<part>.test-classes for sonar.java.binaries and sonar.java.test.binaries), coverage/<part>.out for Go). Callers pin it:
 #   uses: paxel/gates/.github/workflows/sonar.yml@<sha> # vX.Y.Z
 #   secrets: { sonar-token: "${{ secrets.SQ_TOKEN }}" }
-# SonarQube Cloud's quality gate looks at new code only. After the scan the job therefore reads
+# SonarQube Cloud's quality gate looks at new code only and knows nothing of the accepted
+# findings, so its verdict does not fail the job. After the scan the job reads
 # every open issue and every hotspot to review and fails on each one that
 # code-scanning-ignores.toml does not accept: on a push those of the branch, on a pull request
 # those the pull request adds. A pull request is not judged on what its target branch has open,
@@ -46,12 +47,23 @@ jobs:
           path: coverage
           merge-multiple: true
       - uses: SonarSource/sonarqube-scan-action@e805d875275f728fac1885b413934be6d7c63f65 # v8.4.1
+        id: scan
+        # The quality gate's verdict does not fail the job: it knows nothing of the accepted
+        # findings. The wait stays, so the findings are there when the next steps read them.
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.sonar-token }}
         with:
-          # The run fails when the quality gate does.
           args: >-
             -Dsonar.qualitygate.wait=true
+      - name: The scan reached SonarQube Cloud
+        env:
+          OUTCOME: ${{ steps.scan.outcome }}
+        run: |
+          # The scanner writes this file once its report is uploaded; without it the failure
+          # is the scan's own, not the quality gate's.
+          test -f .scannerwork/report-task.txt || { echo "::error::the SonarQube Cloud scan did not upload its report"; exit 1; }
+          [ "$OUTCOME" = success ] || echo "::notice::SonarQube Cloud's quality gate failed; the findings are judged by the accepted-findings file below"
 
       # gates comes after the scan, so SonarQube Cloud never analyses its files.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

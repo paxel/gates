@@ -45,7 +45,8 @@ open issue, of any type and severity, and every security hotspot to review count
 alert: it fails the release, the weekly Security run and CI's sonar job unless
 `code-scanning-ignores.toml` accepts it, with tool "SonarQube Cloud", its rule and its file.
 Nothing is marked as false positive, accepted or safe in SonarQube Cloud's web UI: the reason
-and the date live in the repository.
+and the date live in the repository. Since 1.2.0 the quality gate's own verdict does not fail
+the sonar job, because it cannot see what the file accepts; the findings alone decide.
 
 **Releases (Q7, Q8).** Every release file gets a build provenance attestation, the Sigstore
 bundle and a CycloneDX SBOM; npm and PyPI packages get their registry's provenance;
