@@ -222,6 +222,54 @@ class AuditChecksTest(unittest.TestCase):
         self.assertEqual(res["private-vulnerability-reporting"].state, "present")
         self.assertEqual(res["default-branch"].state, "drift")
 
+    TOOL_PINS = {
+        "Cargo.toml": "[package]\nname = 'x'\n",
+        "images/toolchains/node/package.json": "{}",
+        "images/toolchains/node/package-lock.json": "{}",
+    }
+
+    def test_a_manifest_under_a_not_stack_path_is_no_stack(self) -> None:
+        self.write(self.TOOL_PINS)
+        self.assertEqual(self.repo().stacks, ["rust", "ts"])
+        self.write(
+            {
+                "gates.toml": '[[NotStacks]]\npath = "images/toolchains/"\n'
+                'reason = "npm pins of the tools in the image"\n'
+            }
+        )
+        repo = self.repo()
+        self.assertEqual(repo.stacks, ["rust"])
+        res = self.results(repo)
+        self.assertEqual(res["gates-toml"].state, "present")
+        self.assertNotIn("npm", res["dependabot"].detail)
+        self.assertNotIn("images/toolchains", res["lint-config"].detail)
+
+    def test_a_not_stack_path_covers_only_its_own_directory(self) -> None:
+        self.write({**self.TOOL_PINS, "images/toolchains-app/package.json": "{}"})
+        self.write({"gates.toml": '[[NotStacks]]\npath = "images/toolchains"\nreason = "pins"\n'})
+        self.assertEqual(self.repo().stacks, ["rust", "ts"])
+
+    def test_no_gates_toml_is_present(self) -> None:
+        self.assertEqual(self.results(self.repo())["gates-toml"].state, "present")
+
+    def test_an_incomplete_not_stack_entry_is_drift_and_skips_nothing(self) -> None:
+        self.write(self.TOOL_PINS)
+        cases = {
+            '[[NotStacks]]\npath = "images/toolchains"\n': "NotStacks images/toolchains: no reason",
+            '[[NotStacks]]\nreason = "pins"\n': "NotStacks 1: no path",
+            '[[NotStacks]]\npath = "../away"\nreason = "pins"\n': "not a directory inside the repository",
+            '[[NotStacks]]\npath = "images/gone"\nreason = "pins"\n': "no such directory",
+            "[[NotStacks]\n": "unreadable",
+        }
+        for body, detail in cases.items():
+            with self.subTest(body=body):
+                self.write({"gates.toml": body})
+                repo = self.repo()
+                self.assertEqual(repo.stacks, ["rust", "ts"])
+                res = self.results(repo)["gates-toml"]
+                self.assertEqual(res.state, "drift")
+                self.assertIn(detail, res.detail)
+
     def test_the_secrets_a_code_repository_needs(self) -> None:
         self.write({"Cargo.toml": "[package]\nname = 'x'\n"})
         res = self.results(self.repo(settings={"secrets": ["GATES_ALERTS_TOKEN"]}))["secrets"]

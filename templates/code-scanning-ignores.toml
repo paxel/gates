@@ -44,3 +44,25 @@ the missing approvers and stale-review dismissal, so it stays below maximal."""
 # ignoreUntil = CREATED_PLUS_90_DAYS
 # reason = """The repository was created on CREATED; Scorecard flags every repository younger \
 # than 90 days, whatever its activity. The finding ends by itself on CREATED_PLUS_90_DAYS."""
+
+# The same young repository: Scorecard's SASTID counts only pull requests merged with SAST, and
+# the first commits went straight to summer. Same date as MaintainedID; by then pull requests
+# carry CodeQL and SonarQube Cloud.
+# [[IgnoredAlerts]]
+# tool = "Scorecard"
+# rule = "SASTID"
+# ignoreUntil = CREATED_PLUS_90_DAYS
+# reason = """Scorecard counts only pull requests merged with SAST; the first commits of the \
+# repository were pushed directly. CodeQL and SonarQube Cloud run on every push and pull \
+# request, and the finding clears once changes arrive through pull requests."""
+
+# A Dart repository: Scorecard knows no Dart fuzzer, so the weekly run of fuzz.yml with
+# stack: dart still scores 0. Uncomment it where fuzz.yml uses the dart stack, with a review
+# date six months ahead.
+# [[IgnoredAlerts]]
+# tool = "Scorecard"
+# rule = "FuzzingID"
+# ignoreUntil = REVIEW_DATE
+# reason = """Scorecard detects fuzzing only through OSS-Fuzz, ClusterFuzzLite and the fuzzers of \
+# other languages; it knows no Dart fuzzer. .github/workflows/fuzz.yml fuzzes the code weekly \
+# with the Dart stack of paxel/gates."""

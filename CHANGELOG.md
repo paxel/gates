@@ -4,36 +4,27 @@ All notable changes to gates are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.3.0]
+## [1.4.0]
 
 ### Added
 
-- `fuzz.yml` takes `stack: dart`: each target is a Dart script run as
-  `dart run <target> <seconds>`, with the SDK of the Flutter version in `.fvmrc`
-  ([gate-1047](https://github.com/paxel/gates/issues/62)).
-- `pub.dev` is a distribution badge, and the release template publishes a Dart package to
-  pub.dev in a last job, `pub-dev`, after the GitHub release
-  ([gate-1048](https://github.com/paxel/gates/issues/63)).
-- `templates/osv-scanner.toml` carries dated licence overrides for the PyPI packages `atheris`,
-  `colorama` and `avro`, which deps.dev reports without a standard licence
-  ([gate-1049](https://github.com/paxel/gates/issues/64)).
 - `templates/code-scanning-ignores.toml` carries a commented, dated entry for Scorecard's
-  `MaintainedID`, which flags every repository younger than 90 days
-  ([gate-1050](https://github.com/paxel/gates/issues/65)).
-- The audit's check `secrets` asks for `GATES_ALERTS_TOKEN` in every repository and `SQ_TOKEN`
-  in every code repository; `GATES_AUDIT_TOKEN` needs Secrets: read for it
-  ([gate-1051](https://github.com/paxel/gates/issues/66)).
-
-### Changed
-
-- `PSF-2.0` is on the licence allowlist, so `typing-extensions` needs no override
-  ([gate-1049](https://github.com/paxel/gates/issues/64)).
+  `FuzzingID` in a Dart repository, whose fuzzer Scorecard does not know
+  ([gate-1053](https://github.com/paxel/gates/issues/69)).
+- `templates/code-scanning-ignores.toml` carries a commented entry for Scorecard's `SASTID`
+  next to `MaintainedID`, dated the creation date plus 90 days, for a repository whose first
+  commits did not come through pull requests
+  ([gate-1055](https://github.com/paxel/gates/issues/71)).
+- A repository declares directories whose manifests are not a stack as `[[NotStacks]]` in a
+  `gates.toml` at its root; the audit leaves them out of stack detection and checks that every
+  entry has a path and a reason, while the OSV gate still scans them
+  ([gate-1052](https://github.com/paxel/gates/issues/68)).
 
 ### Fixed
 
-- The OSV gate no longer blocks every Pub package on an unknown licence: it reads the licence of
-  the locked version from pub.dev and blocks only when pub.dev names none or one outside the
-  allowlist ([gate-1046](https://github.com/paxel/gates/issues/61)).
+- The verification command in `provenance.yml` names the gates provenance workflow as signer
+  and the release tag as source, so it passes for a release attested through gates
+  ([gate-1054](https://github.com/paxel/gates/issues/70)).
 
 ---
 

@@ -10,7 +10,7 @@
 #           "release"  repositories that publish releases (code repositories)
 # detect:   how the audit sees it; see scripts/audit/checks.py for each kind.
 
-version = "1.3.0"
+version = "1.4.0"
 default_branch = "summer"
 
 [active]
@@ -177,6 +177,13 @@ group = "Files"
 label = "LICENSE"
 applies = "all"
 detect = { kind = "any-file", paths = ["LICENSE", "LICENSE.md", "LICENSE-MIT"] }
+
+[[checks]]
+id = "gates-toml"
+group = "Files"
+label = "gates.toml, if there is one: every [[NotStacks]] entry has a path and a reason"
+applies = "all"
+detect = { kind = "gates-toml" }
 
 [[checks]]
 id = "security-md"
