@@ -7,8 +7,10 @@ import unittest
 from contextlib import redirect_stdout
 from io import StringIO
 from typing import Any
+from unittest import mock
 
-from osv_gate import main
+import osv_gate
+from osv_gate import main, pub_licences
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 TODAY = datetime.date(2026, 11, 15)
@@ -73,6 +75,88 @@ class OsvGateTest(unittest.TestCase):
         code, out = self.gate(self.results([self.pkg(licenses=["GPL-3.0"], license_violations=["GPL-3.0"])]))
         self.assertEqual(code, 1)
         self.assertIn("LICENCE: paste 1.0.15", out)
+
+    def pub(self, name: str = "yaml", version: str = "3.1.3") -> dict[str, Any]:
+        return {
+            "package": {"name": name, "version": version, "ecosystem": "Pub"},
+            "licenses": ["UNKNOWN"],
+            "license_violations": ["UNKNOWN"],
+        }
+
+    def pub_gate(
+        self, answer: tuple[list[str], str], *packages: dict[str, Any]
+    ) -> tuple[int, str, mock.Mock]:
+        (self.root / "pubspec.lock").write_text("")
+        lookup = mock.Mock(return_value=answer)
+        with mock.patch.object(osv_gate, "pub_licences", lookup):
+            code, out = self.gate(self.results(list(packages or [self.pub()]), "pubspec.lock"))
+        return code, out, lookup
+
+    def test_an_unknown_pub_licence_that_pub_dev_names_as_allowed_passes(self) -> None:
+        code, out, lookup = self.pub_gate((["mit"], ""))
+        self.assertEqual(code, 0, out)
+        lookup.assert_called_once_with("yaml", "3.1.3")
+
+    def test_a_pub_licence_outside_the_allowlist_blocks(self) -> None:
+        code, out, _ = self.pub_gate((["mit", "gpl-3.0"], ""))
+        self.assertEqual(code, 1)
+        self.assertIn("LICENCE: yaml 3.1.3", out)
+        self.assertIn("gpl-3.0 (pub.dev)", out)
+        self.assertNotIn("mit,", out)
+
+    def test_no_answer_from_pub_dev_blocks(self) -> None:
+        code, out, _ = self.pub_gate(([], "no answer from pub.dev: timed out"))
+        self.assertEqual(code, 1)
+        self.assertIn("UNKNOWN, no answer from pub.dev: timed out", out)
+
+    def test_a_pub_version_is_looked_up_once(self) -> None:
+        _, _, lookup = self.pub_gate((["bsd-3-clause"], ""), self.pub(), self.pub())
+        lookup.assert_called_once_with("yaml", "3.1.3")
+
+    def test_an_unknown_licence_of_another_ecosystem_is_not_looked_up(self) -> None:
+        lookup = mock.Mock(return_value=(["mit"], ""))
+        pkg = self.pkg(licenses=["UNKNOWN"], license_violations=["UNKNOWN"])
+        with mock.patch.object(osv_gate, "pub_licences", lookup):
+            code, out = self.gate(self.results([pkg]))
+        self.assertEqual(code, 1)
+        self.assertIn("LICENCE: paste 1.0.15", out)
+        lookup.assert_not_called()
+
+    def test_a_named_pub_licence_outside_the_allowlist_is_not_looked_up(self) -> None:
+        pkg = {**self.pub(), "licenses": ["GPL-3.0"], "license_violations": ["GPL-3.0"]}
+        code, out, lookup = self.pub_gate((["mit"], ""), pkg)
+        self.assertEqual(code, 1)
+        self.assertIn("GPL-3.0", out)
+        lookup.assert_not_called()
+
+    def answer(self, body: bytes) -> mock.MagicMock:
+        response = mock.MagicMock()
+        response.__enter__.return_value.read.return_value = body
+        return response
+
+    def test_pub_dev_tags_give_the_licences_without_the_classifications(self) -> None:
+        body = json.dumps({"tags": ["sdk:dart", "license:mit", "license:fsf-libre", "license:osi-approved"]})
+        with mock.patch("urllib.request.urlopen", return_value=self.answer(body.encode())) as urlopen:
+            self.assertEqual(pub_licences("yaml", "3.1.3+1"), (["mit"], ""))
+        self.assertEqual(
+            urlopen.call_args.args[0], "https://pub.dev/api/packages/yaml/versions/3.1.3%2B1/score"
+        )
+
+    def test_an_obsolete_pub_version_names_no_licence(self) -> None:
+        body = json.dumps({"tags": ["publisher:tools.dart.dev", "is:obsolete"]})
+        with mock.patch("urllib.request.urlopen", return_value=self.answer(body.encode())):
+            licences, reason = pub_licences("yaml", "3.1.0")
+        self.assertEqual(licences, [])
+        self.assertIn("no licence", reason)
+
+    def test_an_unreadable_pub_dev_answer_names_no_licence(self) -> None:
+        for effect in (OSError("timed out"), None):
+            with mock.patch(
+                "urllib.request.urlopen", side_effect=effect, return_value=self.answer(b"<html>")
+            ):
+                licences, reason = pub_licences("yaml", "3.1.3")
+            self.assertEqual(licences, [])
+            self.assertTrue(reason)
 
     def test_the_repos_own_package_has_no_licence_to_check(self) -> None:
         own = {
