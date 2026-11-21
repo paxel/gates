@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `templates/code-scanning-ignores.toml` carries a commented, dated entry for Scorecard's
   `FuzzingID` in a Dart repository, whose fuzzer Scorecard does not know
   ([gate-1053](https://github.com/paxel/gates/issues/69)).
+- `templates/code-scanning-ignores.toml` carries a commented entry for Scorecard's `SASTID`
+  next to `MaintainedID`, dated the creation date plus 90 days, for a repository whose first
+  commits did not come through pull requests
+  ([gate-1055](https://github.com/paxel/gates/issues/71)).
 - A repository declares directories whose manifests are not a stack as `[[NotStacks]]` in a
   `gates.toml` at its root; the audit leaves them out of stack detection and checks that every
   entry has a path and a reason, while the OSV gate still scans them
