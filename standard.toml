@@ -158,6 +158,13 @@ applies = "all"
 detect = { kind = "setting", keys = ["private_vulnerability_reporting"] }
 
 [[checks]]
+id = "secrets"
+group = "GitHub settings"
+label = "The Actions secrets a release and the sonar job need (names only)"
+applies = "all"
+detect = { kind = "secrets", all = ["GATES_ALERTS_TOKEN"], code = ["SQ_TOKEN"] }
+
+[[checks]]
 id = "default-branch"
 group = "GitHub settings"
 label = "Default branch is summer"

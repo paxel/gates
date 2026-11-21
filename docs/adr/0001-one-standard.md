@@ -88,7 +88,9 @@ findings are accepted in every repository with that reason; Renovate is not used
 - `GITHUB_TOKEN` cannot read secret-scanning alerts. The release gate needs the secret
   `GATES_ALERTS_TOKEN` (fine-grained, Secret scanning alerts: read) in every repository and
   fails without it. The audit needs `GATES_AUDIT_TOKEN` (read-only, plus Issues: read and
-  write to open the drift issues).
+  write to open the drift issues). Since 1.3.0 the audit's check `secrets` asks for
+  `GATES_ALERTS_TOKEN` in every repository and `SQ_TOKEN` in every code repository, read by
+  name through Secrets: read, so a missing secret is drift before the first release fails.
 - A job that calls a reusable workflow cannot be allowed to fail, so the red fixtures run the
   composite actions as steps.
 - Every repository's required checks change their names when its callers move to the shared

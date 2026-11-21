@@ -14,6 +14,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `templates/code-scanning-ignores.toml` carries a commented, dated entry for Scorecard's
   `MaintainedID`, which flags every repository younger than 90 days
   ([gate-1050](https://github.com/paxel/gates/issues/65)).
+- The audit's check `secrets` asks for `GATES_ALERTS_TOKEN` in every repository and `SQ_TOKEN`
+  in every code repository; `GATES_AUDIT_TOKEN` needs Secrets: read for it
+  ([gate-1051](https://github.com/paxel/gates/issues/66)).
 
 ### Changed
 

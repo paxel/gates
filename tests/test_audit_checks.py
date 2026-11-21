@@ -215,6 +215,25 @@ class AuditChecksTest(unittest.TestCase):
         self.assertEqual(res["private-vulnerability-reporting"].state, "present")
         self.assertEqual(res["default-branch"].state, "drift")
 
+    def test_the_secrets_a_code_repository_needs(self) -> None:
+        self.write({"Cargo.toml": "[package]\nname = 'x'\n"})
+        res = self.results(self.repo(settings={"secrets": ["GATES_ALERTS_TOKEN"]}))["secrets"]
+        self.assertEqual(res.state, "drift")
+        self.assertEqual(res.detail, "missing SQ_TOKEN")
+        res = self.results(self.repo(settings={"secrets": ["GATES_ALERTS_TOKEN", "SQ_TOKEN"]}))["secrets"]
+        self.assertEqual(res.state, "present")
+
+    def test_a_repository_without_code_needs_only_the_alerts_token(self) -> None:
+        res = self.results(self.repo(settings={"secrets": ["GATES_ALERTS_TOKEN"]}))["secrets"]
+        self.assertEqual(res.state, "present")
+        res = self.results(self.repo(settings={"secrets": []}))["secrets"]
+        self.assertEqual((res.state, res.detail), ("drift", "missing GATES_ALERTS_TOKEN"))
+
+    def test_secrets_that_could_not_be_listed_are_drift(self) -> None:
+        settings = {"secrets": None, "unreadable": {"secrets": "HTTP 403"}}
+        res = self.results(self.repo(settings=settings))["secrets"]
+        self.assertEqual((res.state, res.detail), ("drift", "not readable: secrets (HTTP 403)"))
+
     def test_a_setting_that_could_not_be_read_says_so(self) -> None:
         settings = {
             "secret_scanning": None,
