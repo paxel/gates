@@ -29,6 +29,7 @@ import datetime
 import json
 import pathlib
 import sys
+import time
 import tomllib
 import urllib.error
 import urllib.parse
@@ -42,6 +43,9 @@ SKIP_DIRS = {".git", "target", "node_modules", "build", ".dart_tool", ".gates", 
 PUB_HOST = "https://pub.dev"
 # pub.dev's licence tags that classify a licence rather than name one.
 PUB_CLASSIFICATIONS = {"fsf-libre", "osi-approved"}
+# Waits before the second and the third try of a pub.dev lookup that met a network error, a
+# timeout, an HTTP 429 or an HTTP 5xx; after the last try the package blocks.
+PUB_WAITS = (2.0, 4.0)
 
 
 @dataclass(frozen=True)
@@ -115,11 +119,20 @@ def pub_licences(name: str, version: str) -> tuple[list[str], str]:
     when pub.dev gives none (no answer, or an obsolete version it no longer analyses)."""
     quoted = urllib.parse.quote(name, safe=""), urllib.parse.quote(version, safe="")
     path = "api/packages/{}/versions/{}/score".format(*quoted)
-    try:
-        with urllib.request.urlopen(f"{PUB_HOST}/{path}", timeout=60) as response:  # noqa: S310 - fixed https host
-            data = json.loads(response.read().decode("utf-8"))
-    except (OSError, ValueError, urllib.error.URLError) as error:
-        return [], f"no answer from pub.dev: {error}"
+    for wait in (*PUB_WAITS, None):
+        try:
+            with urllib.request.urlopen(f"{PUB_HOST}/{path}", timeout=60) as response:  # noqa: S310 - fixed https host
+                data = json.loads(response.read().decode("utf-8"))
+            break
+        except urllib.error.HTTPError as error:
+            if wait is None or not (error.code == 429 or error.code >= 500):
+                return [], f"no answer from pub.dev: {error}"
+        except ValueError as error:
+            return [], f"no answer from pub.dev: {error}"
+        except OSError as error:
+            if wait is None:
+                return [], f"no answer from pub.dev: {error}"
+        time.sleep(wait)
     tags = data.get("tags") if isinstance(data, dict) else None
     if not isinstance(tags, list):
         return [], "no tags from pub.dev"
