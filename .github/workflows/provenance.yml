@@ -64,15 +64,18 @@ jobs:
         run: |
           [ -n "$(ls -A dist 2>/dev/null)" ] || { echo "::error::no release files in the artifacts; nothing would be attested"; exit 1; }
           mv "$NAME-$TAG-source.cdx.json" dist/
-      # Signed provenance per file: `gh attestation verify <file> -R <owner/repo>`.
+      # Signed provenance per file. The signer is this reusable workflow, not the caller's
+      # release.yml, so a check names it:
+      #   gh attestation verify <file> --repo <owner/repo> \
+      #     --signer-workflow paxel/gates/.github/workflows/provenance.yml --source-ref refs/tags/<tag>
       - name: Build provenance attestations
         id: attest
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: dist/*
-      # The same provenance as a release file, for checks without the GitHub API
-      # (`gh attestation verify <file> -R <owner/repo> --bundle <this file>`) and for
-      # Scorecard's Signed-Releases. Copied after the attestation, so it is no subject of itself.
+      # The same provenance as a release file, for checks without the GitHub API (the command
+      # above plus `--bundle <name>-<tag>-provenance.sigstore.json`) and for Scorecard's
+      # Signed-Releases. Copied after the attestation, so it is no subject of itself.
       - name: Sigstore bundle next to the files
         env:
           BUNDLE: ${{ steps.attest.outputs.bundle-path }}
