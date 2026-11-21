@@ -55,11 +55,57 @@ def walk(root: pathlib.Path, name: str) -> list[pathlib.Path]:
     return found
 
 
+# The repository's own file of directories whose manifests are not a stack (gate-1052).
+GATES_TOML = "gates.toml"
+
+
+def not_stacks(root: pathlib.Path) -> tuple[list[pathlib.PurePosixPath], list[str]]:
+    """The directories gates.toml declares as not a stack, and what is wrong with its entries.
+    Only complete entries count; an incomplete one leaves its manifests a stack."""
+    raw = text(root, GATES_TOML)
+    if raw is None:
+        return [], []
+    try:
+        entries = tomllib.loads(raw).get("NotStacks") or []
+    except ValueError as error:
+        return [], [f"unreadable: {error}"]
+    paths: list[pathlib.PurePosixPath] = []
+    problems: list[str] = []
+    for i, entry in enumerate(entries if isinstance(entries, list) else []):
+        path = str(entry.get("path") or "").strip().strip("/") if isinstance(entry, dict) else ""
+        label = f"NotStacks {path or i + 1}"
+        if not path:
+            problems.append(f"{label}: no path")
+            continue
+        rel = pathlib.PurePosixPath(path)
+        if rel.is_absolute() or ".." in rel.parts:
+            problems.append(f"{label}: not a directory inside the repository")
+            continue
+        if not str(entry.get("reason") or "").strip():
+            problems.append(f"{label}: no reason")
+            continue
+        if not (root / rel).is_dir():
+            problems.append(f"{label}: no such directory")
+            continue
+        paths.append(rel)
+    return paths, problems
+
+
+def manifests(root: pathlib.Path, name: str) -> list[pathlib.Path]:
+    """The manifests of that name that make a stack: not under a directory of gates.toml."""
+    skip, _ = not_stacks(root)
+    return [
+        m
+        for m in walk(root, name)
+        if not any(pathlib.PurePosixPath(m.relative_to(root).as_posix()).is_relative_to(d) for d in skip)
+    ]
+
+
 def find_stacks(root: pathlib.Path, standard: dict[str, Any]) -> list[str]:
     return [
         str(s["id"])
         for s in standard.get("stacks") or []
-        if any(walk(root, m) for m in s.get("manifests") or [])
+        if any(manifests(root, m) for m in s.get("manifests") or [])
     ]
 
 
@@ -165,6 +211,12 @@ def k_secrets(repo: Repo, d: dict[str, Any], s: dict[str, Any], c: Context) -> t
     want = [str(n) for rule, names in d.items() if rule != "kind" and applies(rule, repo) for n in names]
     missing = [n for n in want if n not in have]
     return (not missing), ("missing " + ", ".join(missing)) if missing else ""
+
+
+def k_gates_toml(repo: Repo, d: dict[str, Any], s: dict[str, Any], c: Context) -> tuple[bool, str]:
+    """No gates.toml, or one whose every entry has a path and a reason."""
+    _, problems = not_stacks(repo.root)
+    return (not problems), "; ".join(problems)
 
 
 def k_default_branch(repo: Repo, d: dict[str, Any], s: dict[str, Any], c: Context) -> tuple[bool, str]:
@@ -361,7 +413,7 @@ def k_lint_config(repo: Repo, d: dict[str, Any], s: dict[str, Any], c: Context) 
             continue
         req_file = c.gates / "configs" / str(stack["id"]) / "required.toml"
         reqs = tomllib.loads(req_file.read_text(encoding="utf-8")).get("require") or []
-        for manifest in (m for name in stack.get("manifests") or [] for m in walk(repo.root, str(name))):
+        for manifest in (m for name in stack.get("manifests") or [] for m in manifests(repo.root, str(name))):
             problems += config_check.check(manifest.parent, reqs)
     rel = [p.replace(str(repo.root) + "/", "") for p in problems]
     return (not problems), "; ".join(rel[:3]) + (" …" if len(rel) > 3 else "")
@@ -427,6 +479,7 @@ KINDS: dict[str, Check] = {
     "ruleset": k_ruleset,
     "setting": k_setting,
     "secrets": k_secrets,
+    "gates-toml": k_gates_toml,
     "default-branch": k_default_branch,
     "file": k_file,
     "any-file": k_any_file,

@@ -179,6 +179,13 @@ applies = "all"
 detect = { kind = "any-file", paths = ["LICENSE", "LICENSE.md", "LICENSE-MIT"] }
 
 [[checks]]
+id = "gates-toml"
+group = "Files"
+label = "gates.toml, if there is one: every [[NotStacks]] entry has a path and a reason"
+applies = "all"
+detect = { kind = "gates-toml" }
+
+[[checks]]
 id = "security-md"
 group = "Files"
 label = "SECURITY.md"

@@ -62,6 +62,11 @@ unsafe; then distribution badges; nothing else.
 **Repositories without app code (Q10).** agent-skills, fdroid, homebrew-tap and scoop-bucket
 get everything that applies, with a CI that checks what they hold.
 
+**Manifests that are not a stack (since 1.4.0).** A repository lists the directories whose
+manifests hold no code, such as the pins of tools installed into an image, as `[[NotStacks]]`
+with a path and a reason in its `gates.toml`. The audit does not count them as a stack; the
+OSV gate still scans their lockfiles.
+
 **Branch and files (Q11, Q12).** The default branch is `summer`. `AGENTS.md` holds the rules,
 `CLAUDE.md` holds only `@AGENTS.md`, plus `CONTEXT.md`, `docs/adr/` and
 `docs/agents/{issue-tracker,triage-labels,ticket-ids}.md`.
