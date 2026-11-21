@@ -11,7 +11,7 @@ names.
 | `workflows/security.yml`            | `.github/workflows/security.yml`      | nothing                                               |
 | `workflows/codeql.yml`              | `.github/workflows/codeql.yml`        | the languages                                         |
 | `workflows/fuzz.yml`                | `.github/workflows/fuzz.yml`          | the stack and the targets                             |
-| `workflows/release.yml`             | `.github/workflows/release.yml`       | the build jobs                                        |
+| `workflows/release.yml`             | `.github/workflows/release.yml`       | the build jobs; `pub-dev` for a Dart package only     |
 | `workflows/scorecard.yml`           | `.github/workflows/scorecard.yml`     | nothing; it must stay identical                       |
 | `workflows/content-ci.yml`          | `.github/workflows/ci.yml`            | for a repo without app code: kind and paths           |
 | `dependabot.yml`                    | `.github/dependabot.yml`              | keep the repo's ecosystems                            |
