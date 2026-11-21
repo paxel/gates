@@ -25,7 +25,7 @@ shared workflow to a release:
 ```yaml
 jobs:
   rust:
-    uses: paxel/gates/.github/workflows/rust.yml@<sha> # v1.4.0
+    uses: paxel/gates/.github/workflows/rust.yml@<sha> # v1.4.1
 ```
 
 Dependabot's `github-actions` updates propose the next release. The weekly audit opens an
