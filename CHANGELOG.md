@@ -11,6 +11,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `templates/osv-scanner.toml` carries dated licence overrides for the PyPI packages `atheris`,
   `colorama` and `avro`, which deps.dev reports without a standard licence
   ([gate-1049](https://github.com/paxel/gates/issues/64)).
+- `templates/code-scanning-ignores.toml` carries a commented, dated entry for Scorecard's
+  `MaintainedID`, which flags every repository younger than 90 days
+  ([gate-1050](https://github.com/paxel/gates/issues/65)).
 
 ### Changed
 
