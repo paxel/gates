@@ -27,7 +27,8 @@ files, badges, lints and the Scorecard copy.
 stack; cargo audit, cargo deny, govulncheck and npm audit are removed. One licence allowlist:
 MIT, MIT-0, 0BSD, Apache-2.0, Apache-2.0 WITH LLVM-exception, BSD-2-Clause, BSD-3-Clause,
 ISC, Zlib, BSL-1.0, Unicode-3.0, CC0-1.0, Unlicense, bzip2-1.0.6, MPL-2.0, OFL-1.1,
-Ubuntu-font-1.0. Advisory and licence exceptions carry a reason and a date.
+Ubuntu-font-1.0, PSF-2.0 (since 1.3.0). Advisory and licence exceptions carry a reason and a
+date.
 
 **Coverage (Q4).** One ratchet script; one floor per measured part, raised to the measured
 value minus 0.1; CI only checks; a badge per floor.

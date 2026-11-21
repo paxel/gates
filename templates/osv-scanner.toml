@@ -15,3 +15,29 @@
 # license.ignore = true
 # effectiveUntil = 2027-05-14
 # reason = "..."
+
+# PyPI packages that deps.dev reports without a standard licence, while their own LICENSE file
+# names one. Keep the ones the repository's lockfiles hold, drop the others.
+[[PackageOverrides]]
+name = "atheris"
+ecosystem = "PyPI"
+license.override = ["Apache-2.0"]
+effectiveUntil = 2027-05-14
+reason = """deps.dev reports no licence for atheris; its LICENSE in google/atheris is \
+Apache-2.0."""
+
+[[PackageOverrides]]
+name = "colorama"
+ecosystem = "PyPI"
+license.override = ["BSD-3-Clause"]
+effectiveUntil = 2027-05-14
+reason = """deps.dev reports colorama's licence as non-standard; its LICENSE.txt is the \
+3-clause BSD licence."""
+
+[[PackageOverrides]]
+name = "avro"
+ecosystem = "PyPI"
+license.override = ["Apache-2.0"]
+effectiveUntil = 2027-05-14
+reason = """deps.dev reports avro's licence as non-standard; its LICENSE.txt in apache/avro is \
+Apache-2.0."""

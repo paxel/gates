@@ -17,15 +17,6 @@
 # reason = "..."
 
 [[PackageOverrides]]
-name = "typing-extensions"
-ecosystem = "PyPI"
-license.ignore = true
-effectiveUntil = 2027-05-14
-reason = """PSF-2.0 is a permissive licence that is not on the standard's allowlist. \
-typing-extensions comes only through mypy, a development tool that checks the scripts; it is \
-never part of anything gates ships, and the scripts use the standard library only."""
-
-[[PackageOverrides]]
 name = "atheris"
 ecosystem = "PyPI"
 license.override = ["Apache-2.0"]
