@@ -86,6 +86,8 @@ class OsvGateTest(unittest.TestCase):
     def pub_gate(
         self, answer: tuple[list[str], str], *packages: dict[str, Any]
     ) -> tuple[int, str, mock.Mock]:
+        (self.root / "Cargo.toml").unlink()
+        (self.root / "pubspec.yaml").write_text("name: x\n")
         (self.root / "pubspec.lock").write_text("")
         lookup = mock.Mock(return_value=answer)
         with mock.patch.object(osv_gate, "pub_licences", lookup):
