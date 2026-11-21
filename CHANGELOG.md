@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- `fuzz.yml` takes `stack: dart`: each target is a Dart script run as
+  `dart run <target> <seconds>`, with the SDK of the Flutter version in `.fvmrc`
+  ([gate-1047](https://github.com/paxel/gates/issues/62)).
 - `templates/osv-scanner.toml` carries dated licence overrides for the PyPI packages `atheris`,
   `colorama` and `avro`, which deps.dev reports without a standard licence
   ([gate-1049](https://github.com/paxel/gates/issues/64)).

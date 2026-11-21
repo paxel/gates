@@ -17,6 +17,12 @@ name: Fuzz
 #   python  Atheris scripts (run with uv)
 #   ts      Jazzer.js target files
 #   java    JUnit @FuzzTest classes (Jazzer through Maven)
+#   dart    Dart scripts, run as `dart run <target> <seconds>`: exit 0 means no failure,
+#           anything else fails the job. A target writes the input that failed to
+#           fuzz/artifacts/<script name without .dart>/crash-<sha256>. Dart has no
+#           coverage-guided fuzzer like libFuzzer; the target brings its own (a mutation
+#           loop, a package), so expect less depth than the other stacks. The SDK is the one
+#           of the Flutter version in .fvmrc; nothing is replayed before fuzzing.
 # The same file is gates' own weekly fuzz run on its Atheris targets.
 on:
   schedule:
@@ -175,10 +181,30 @@ jobs:
           [ -z "$PREPARE" ] || bash -c "$PREPARE"
           mvn --batch-mode --no-transfer-progress test -Dtest="$TARGET" -Djazzer.max_duration="${SECONDS_EACH}s"
 
-      - name: Unknown stack
-        if: ${{ !contains(fromJSON('["rust","go","python","ts","java"]'), inputs.stack || 'python') }}
+      # Dart: the SDK of the Flutter version in .fvmrc, the only pin (Q15), as in actions/dart.
+      - name: Dart from .fvmrc
+        if: inputs.stack == 'dart'
         run: |
-          echo "::error::stack must be rust, go, python, ts or java"
+          test -f .fvmrc || { echo "::error::no .fvmrc: the Flutter version must be pinned (Q15)"; exit 1; }
+          version=$(python3 -c 'import json; print(json.load(open(".fvmrc"))["flutter"])')
+          git clone --quiet --depth 1 --branch "$version" https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/flutter/bin/flutter" --version
+      - name: dart run
+        if: inputs.stack == 'dart'
+        env:
+          TARGET: ${{ matrix.target }}
+          SECONDS_EACH: ${{ inputs.seconds || 300 }}
+          PREPARE: ${{ inputs.prepare }}
+        run: |
+          flutter pub get --enforce-lockfile
+          [ -z "$PREPARE" ] || bash -c "$PREPARE"
+          dart run "$TARGET" "$SECONDS_EACH"
+
+      - name: Unknown stack
+        if: ${{ !contains(fromJSON('["rust","go","python","ts","java","dart"]'), inputs.stack || 'python') }}
+        run: |
+          echo "::error::stack must be rust, go, python, ts, java or dart"
           exit 1
 
       - name: Keep the crash
