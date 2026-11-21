@@ -119,6 +119,16 @@ def settings(owner: str, name: str) -> dict[str, Any]:
     if " 204" not in alerts and " 404" not in alerts:
         unreadable["vulnerability_alerts"] = alerts
 
+    # Names only; GitHub never returns a secret's value.
+    listed = gh("api", f"repos/{owner}/{name}/actions/secrets?per_page=100")
+    error = failure(listed)
+    names = listed.get("secrets") if error is None else None
+    if error is None and not isinstance(names, list):
+        error = "no secrets in the answer"
+    found["secrets"] = [str(s.get("name")) for s in names] if isinstance(names, list) else None
+    if error is not None:
+        unreadable["secrets"] = error
+
     if unreadable:
         found["unreadable"] = unreadable
     return found

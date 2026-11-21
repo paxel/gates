@@ -27,7 +27,8 @@ files, badges, lints and the Scorecard copy.
 stack; cargo audit, cargo deny, govulncheck and npm audit are removed. One licence allowlist:
 MIT, MIT-0, 0BSD, Apache-2.0, Apache-2.0 WITH LLVM-exception, BSD-2-Clause, BSD-3-Clause,
 ISC, Zlib, BSL-1.0, Unicode-3.0, CC0-1.0, Unlicense, bzip2-1.0.6, MPL-2.0, OFL-1.1,
-Ubuntu-font-1.0. Advisory and licence exceptions carry a reason and a date.
+Ubuntu-font-1.0, PSF-2.0 (since 1.3.0). Advisory and licence exceptions carry a reason and a
+date.
 
 **Coverage (Q4).** One ratchet script; one floor per measured part, raised to the measured
 value minus 0.1; CI only checks; a badge per floor.
@@ -50,7 +51,9 @@ the sonar job, because it cannot see what the file accepts; the findings alone d
 
 **Releases (Q7, Q8).** Every release file gets a build provenance attestation, the Sigstore
 bundle and a CycloneDX SBOM; npm and PyPI packages get their registry's provenance;
-registry-only libraries attach their packages to the GitHub release.
+registry-only libraries attach their packages to the GitHub release. Since 1.3.0 a Dart
+package is published to pub.dev by the release, last, after the GitHub release, through the
+Dart team's reusable workflow; its badge is a distribution badge.
 
 **README (Q9).** One badge row in a fixed order: CI · Security · CodeQL · Scorecard · Sonar
 quality gate · Coverage (per floor) · Fuzz · Release · License; Rust adds panic-free and
@@ -87,7 +90,9 @@ findings are accepted in every repository with that reason; Renovate is not used
 - `GITHUB_TOKEN` cannot read secret-scanning alerts. The release gate needs the secret
   `GATES_ALERTS_TOKEN` (fine-grained, Secret scanning alerts: read) in every repository and
   fails without it. The audit needs `GATES_AUDIT_TOKEN` (read-only, plus Issues: read and
-  write to open the drift issues).
+  write to open the drift issues). Since 1.3.0 the audit's check `secrets` asks for
+  `GATES_ALERTS_TOKEN` in every repository and `SQ_TOKEN` in every code repository, read by
+  name through Secrets: read, so a missing secret is drift before the first release fails.
 - A job that calls a reusable workflow cannot be allowed to fail, so the red fixtures run the
   composite actions as steps.
 - Every repository's required checks change their names when its callers move to the shared

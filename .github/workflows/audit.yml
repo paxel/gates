@@ -5,8 +5,9 @@ name: Audit
 # updates or closes, and the run goes red while any repository drifts.
 #
 # GATES_AUDIT_TOKEN: a fine-grained token on all of the owner's repositories with read access
-# to Administration, Contents, Metadata, Secret scanning alerts, Code scanning alerts and
-# Dependabot alerts, and read and write access to Issues (to open the drift issues).
+# to Administration, Contents, Metadata, Secrets (the names of the Actions secrets, never their
+# values), Secret scanning alerts, Code scanning alerts and Dependabot alerts, and read and
+# write access to Issues (to open the drift issues).
 on:
   schedule:
     - cron: "41 6 * * 1"

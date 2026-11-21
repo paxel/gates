@@ -34,3 +34,13 @@ ignoreUntil = REVIEW_DATE
 reason = """Single maintainer: the ruleset blocks deletion and force-pushes and requires a \
 pull request with green CI, but no approval, since nobody else can give one. Scorecard scores \
 the missing approvers and stale-review dismissal, so it stays below maximal."""
+
+# A repository younger than 90 days: Scorecard rates it as not maintained, whatever its
+# activity, and the release gate blocks on it. Set the date to the creation date plus 90 days
+# and uncomment the entry; it ends by itself on that date.
+# [[IgnoredAlerts]]
+# tool = "Scorecard"
+# rule = "MaintainedID"
+# ignoreUntil = CREATED_PLUS_90_DAYS
+# reason = """The repository was created on CREATED; Scorecard flags every repository younger \
+# than 90 days, whatever its activity. The finding ends by itself on CREATED_PLUS_90_DAYS."""

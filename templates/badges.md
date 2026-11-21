@@ -1,7 +1,7 @@
 <!-- The fixed badge row of the standard (Q9), in this order. Replace REPO; keep one
      Coverage badge per part of coverage-floors.toml; Rust repositories keep panic-free and
      unsafe, others delete them. Distribution badges (crates.io, npm, PyPI, Maven Central,
-     F-Droid, docs.rs, platforms) may follow on the next line; nothing else. A repository
+     F-Droid, docs.rs, platforms, pub.dev with the alt text "pub.dev") may follow on the next line; nothing else. A repository
      without app code keeps CI · Security · CodeQL · Scorecard · License. -->
 [![CI](https://github.com/paxel/REPO/actions/workflows/ci.yml/badge.svg?branch=summer)](https://github.com/paxel/REPO/actions/workflows/ci.yml)
 [![Security](https://github.com/paxel/REPO/actions/workflows/security.yml/badge.svg?branch=summer)](https://github.com/paxel/REPO/actions/workflows/security.yml)

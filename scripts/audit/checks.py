@@ -155,6 +155,18 @@ def k_setting(repo: Repo, d: dict[str, Any], s: dict[str, Any], c: Context) -> t
     return (not off and not unread), "; ".join(detail)
 
 
+def k_secrets(repo: Repo, d: dict[str, Any], s: dict[str, Any], c: Context) -> tuple[bool, str]:
+    """The Actions secrets the repository needs, by the rule they apply to ("all", "code", ...).
+    A list GitHub did not give is drift, never a pass."""
+    reason = (repo.settings.get("unreadable") or {}).get("secrets")
+    if reason:
+        return False, f"not readable: secrets ({reason})"
+    have = set(repo.settings.get("secrets") or [])
+    want = [str(n) for rule, names in d.items() if rule != "kind" and applies(rule, repo) for n in names]
+    missing = [n for n in want if n not in have]
+    return (not missing), ("missing " + ", ".join(missing)) if missing else ""
+
+
 def k_default_branch(repo: Repo, d: dict[str, Any], s: dict[str, Any], c: Context) -> tuple[bool, str]:
     want = str(s.get("default_branch", "summer"))
     return repo.default_branch == want, repo.default_branch
@@ -414,6 +426,7 @@ def k_badges(repo: Repo, d: dict[str, Any], s: dict[str, Any], c: Context) -> tu
 KINDS: dict[str, Check] = {
     "ruleset": k_ruleset,
     "setting": k_setting,
+    "secrets": k_secrets,
     "default-branch": k_default_branch,
     "file": k_file,
     "any-file": k_any_file,

@@ -8,7 +8,10 @@ osv-scanner runs once per repository with the licence allowlist and every packag
 
 What blocks:
 - a known vulnerability (an unmaintained notice only with --strict, the weekly run);
-- a dependency whose licence is not on the standard's allowlist;
+- a dependency whose licence is not on the standard's allowlist. deps.dev, where osv-scanner
+  takes licences from, has none for Pub; a Pub package osv-scanner reports as UNKNOWN is looked
+  up on pub.dev for its locked version, and blocks unless pub.dev names its licences and every
+  one of them is on the allowlist;
 - an [[IgnoredVulns]] entry in an osv-scanner.toml without a reason, without an ignoreUntil
   date or with a date that has passed, and a [[PackageOverrides]] entry without a reason,
   without an effectiveUntil date or with a date that has passed;
@@ -27,11 +30,18 @@ import json
 import pathlib
 import sys
 import tomllib
-from collections.abc import Iterable, Sequence
+import urllib.error
+import urllib.parse
+import urllib.request
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
 SKIP_DIRS = {".git", "target", "node_modules", "build", ".dart_tool", ".gates", "vendor"}
+
+PUB_HOST = "https://pub.dev"
+# pub.dev's licence tags that classify a licence rather than name one.
+PUB_CLASSIFICATIONS = {"fsf-libre", "osi-approved"}
 
 
 @dataclass(frozen=True)
@@ -96,8 +106,62 @@ def own_packages(root: pathlib.Path) -> set[str]:
     return names
 
 
-def result_findings(results: dict[str, Any], strict: bool, own: set[str] | None = None) -> list[Finding]:
+# A Pub lookup: the licences pub.dev names for one version, or the reason it names none.
+PubLookup = Callable[[str, str], tuple[list[str], str]]
+
+
+def pub_licences(name: str, version: str) -> tuple[list[str], str]:
+    """The SPDX ids pub.dev's analysis tags the version with; an empty list with the reason
+    when pub.dev gives none (no answer, or an obsolete version it no longer analyses)."""
+    quoted = urllib.parse.quote(name, safe=""), urllib.parse.quote(version, safe="")
+    path = "api/packages/{}/versions/{}/score".format(*quoted)
+    try:
+        with urllib.request.urlopen(f"{PUB_HOST}/{path}", timeout=60) as response:  # noqa: S310 - fixed https host
+            data = json.loads(response.read().decode("utf-8"))
+    except (OSError, ValueError, urllib.error.URLError) as error:
+        return [], f"no answer from pub.dev: {error}"
+    tags = data.get("tags") if isinstance(data, dict) else None
+    if not isinstance(tags, list):
+        return [], "no tags from pub.dev"
+    licences = [
+        str(tag)[len("license:") :]
+        for tag in tags
+        if str(tag).startswith("license:") and str(tag)[len("license:") :] not in PUB_CLASSIFICATIONS
+    ]
+    return licences, "" if licences else "pub.dev names no licence for this version"
+
+
+def pub_finding(
+    info: dict[str, Any],
+    label: str,
+    allowed: set[str],
+    lookup: PubLookup,
+    cache: dict[tuple[str, str], tuple[list[str], str]],
+) -> Finding | None:
+    """None when pub.dev names the version's licences and every one is allowed."""
+    key = (str(info.get("name") or ""), str(info.get("version") or ""))
+    if key not in cache:
+        cache[key] = lookup(*key)
+    licences, reason = cache[key]
+    if not licences:
+        return Finding(True, "LICENCE", f"{label}: UNKNOWN, {reason}")
+    outside = [lic for lic in licences if lic.lower() not in allowed]
+    if outside:
+        return Finding(True, "LICENCE", f"{label}: {', '.join(outside)} (pub.dev)")
+    return None
+
+
+def result_findings(
+    results: dict[str, Any],
+    strict: bool,
+    own: set[str] | None = None,
+    allow: Iterable[str] = (),
+    lookup: PubLookup | None = None,
+) -> list[Finding]:
     rows: list[Finding] = []
+    look = lookup or pub_licences
+    allowed = {a.lower() for a in allow}
+    cache: dict[tuple[str, str], tuple[list[str], str]] = {}
     for result in results.get("results") or []:
         source = (result.get("source") or {}).get("path", "?")
         for package in result.get("packages") or []:
@@ -112,11 +176,15 @@ def result_findings(results: dict[str, Any], strict: bool, own: set[str] | None 
                         f"{vuln.get('id', '?')} {name} in {source}: {vuln.get('summary', '')}",
                     )
                 )
-            violations = package.get("license_violations") or []
-            if violations and info.get("name") not in (own or set()):
-                rows.append(
-                    Finding(True, "LICENCE", f"{name} in {source}: {', '.join(map(str, violations))}")
-                )
+            violations = [str(v) for v in package.get("license_violations") or []]
+            if not violations or info.get("name") in (own or set()):
+                continue
+            if info.get("ecosystem") == "Pub" and violations == ["UNKNOWN"]:
+                finding = pub_finding(info, f"{name} in {source}", allowed, look, cache)
+                if finding:
+                    rows.append(finding)
+                continue
+            rows.append(Finding(True, "LICENCE", f"{name} in {source}: {', '.join(violations)}"))
     return rows
 
 
@@ -235,7 +303,7 @@ def main(argv: Sequence[str], today: datetime.date | None = None) -> int:
             results = json.load(f)
         root = pathlib.Path(args.root).resolve()
         day = today or datetime.date.today()
-        rows = result_findings(results, args.strict, own_packages(root))
+        rows = result_findings(results, args.strict, own_packages(root), allowlist(standard))
         rows += config_findings(root, day, args.exclude)
         rows += lockfile_findings(root, standard, scanned_sources(results), args.exclude)
     except (OSError, ValueError) as error:

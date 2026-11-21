@@ -84,3 +84,13 @@ jobs:
         with:
           body_path: notes.md
           files: dist/*
+
+  # A Dart package only; delete it in every other repository. pub.dev keeps a version for
+  # good, so it runs last, once the GitHub release is out. It publishes through OIDC, which
+  # pub.dev accepts only for a tag push matching the package's tag pattern (v{{version}}).
+  pub-dev:
+    needs: publish
+    permissions:
+      contents: read
+      id-token: write
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1

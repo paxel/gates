@@ -4,36 +4,36 @@ All notable changes to gates are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.2.0]
+## [1.3.0]
 
 ### Added
 
-- `fuzz.yml` builds Rust targets unoptimised with `rust-dev`, replays the saved crashes of
-  `fuzz/regressions/<target>` before fuzzing and runs the caller's `prepare` command once the
-  dependencies are installed ([gate-1037](https://github.com/paxel/gates/issues/50)).
-- `codeql.yml` takes the caller's CodeQL config with `config-file`
-  ([gate-1039](https://github.com/paxel/gates/issues/52)).
-- `go.yml` builds and vets every module for the systems named in `cross`
-  ([gate-1042](https://github.com/paxel/gates/issues/55)).
-- `java.yml` hands the compiled classes to the SonarQube Cloud scan as `coverage/<part>.classes`
-  and `coverage/<part>.test-classes` ([gate-1043](https://github.com/paxel/gates/issues/56)).
-- `actions/ratchet` checks parts of `coverage-floors.toml` in a job of the repository's own; the
-  audit holds its pin to the latest gates release like a shared workflow's
-  ([gate-1040](https://github.com/paxel/gates/issues/53)).
+- `fuzz.yml` takes `stack: dart`: each target is a Dart script run as
+  `dart run <target> <seconds>`, with the SDK of the Flutter version in `.fvmrc`
+  ([gate-1047](https://github.com/paxel/gates/issues/62)).
+- `pub.dev` is a distribution badge, and the release template publishes a Dart package to
+  pub.dev in a last job, `pub-dev`, after the GitHub release
+  ([gate-1048](https://github.com/paxel/gates/issues/63)).
+- `templates/osv-scanner.toml` carries dated licence overrides for the PyPI packages `atheris`,
+  `colorama` and `avro`, which deps.dev reports without a standard licence
+  ([gate-1049](https://github.com/paxel/gates/issues/64)).
+- `templates/code-scanning-ignores.toml` carries a commented, dated entry for Scorecard's
+  `MaintainedID`, which flags every repository younger than 90 days
+  ([gate-1050](https://github.com/paxel/gates/issues/65)).
+- The audit's check `secrets` asks for `GATES_ALERTS_TOKEN` in every repository and `SQ_TOKEN`
+  in every code repository; `GATES_AUDIT_TOKEN` needs Secrets: read for it
+  ([gate-1051](https://github.com/paxel/gates/issues/66)).
 
 ### Changed
 
-- The Java build settings are asked only of a `pom.xml` with Java sources beside it; a sample
-  project without code no longer fails the config check and the audit
-  ([gate-1038](https://github.com/paxel/gates/issues/51)).
-- A container image badge and its cosign badge may follow the fixed badge row
-  ([gate-1041](https://github.com/paxel/gates/issues/54)).
-- The shared ruff config sets no target version; ruff reads `requires-python`, so a package
-  that supports an older Python gets no rewrites it cannot run
-  ([gate-1044](https://github.com/paxel/gates/issues/57)).
-- The sonar job judges a finding by `code-scanning-ignores.toml` alone: SonarQube Cloud's
-  quality gate no longer fails it, so an accepted finding on a changed line passes
-  ([gate-1045](https://github.com/paxel/gates/issues/59)).
+- `PSF-2.0` is on the licence allowlist, so `typing-extensions` needs no override
+  ([gate-1049](https://github.com/paxel/gates/issues/64)).
+
+### Fixed
+
+- The OSV gate no longer blocks every Pub package on an unknown licence: it reads the licence of
+  the locked version from pub.dev and blocks only when pub.dev names none or one outside the
+  allowlist ([gate-1046](https://github.com/paxel/gates/issues/61)).
 
 ---
 

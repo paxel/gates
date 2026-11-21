@@ -102,6 +102,10 @@ class ListingTest(unittest.TestCase):
             },
             "repos/paxel/x/private-vulnerability-reporting": {"enabled": True},
             "repos/paxel/x/automated-security-fixes": {"_error": "404"},
+            "repos/paxel/x/actions/secrets?per_page=100": {
+                "total_count": 1,
+                "secrets": [{"name": "SQ_TOKEN"}],
+            },
         }
         with (
             mock.patch.object(audit, "gh", side_effect=lambda _api, path: answers[path]),
@@ -116,6 +120,7 @@ class ListingTest(unittest.TestCase):
                 "private_vulnerability_reporting": True,
                 "automated_security_fixes": None,
                 "vulnerability_alerts": "on",
+                "secrets": ["SQ_TOKEN"],
             },
         )
 
@@ -134,8 +139,10 @@ class ListingTest(unittest.TestCase):
                 "private_vulnerability_reporting",
                 "push_protection",
                 "secret_scanning",
+                "secrets",
             ],
         )
+        self.assertIsNone(found["secrets"])
 
     def test_a_setting_github_did_not_answer_for_is_unreadable_not_off(self) -> None:
         denied = {"_error": "gh: Resource not accessible by personal access token (HTTP 403)"}
@@ -144,6 +151,7 @@ class ListingTest(unittest.TestCase):
             "repos/paxel/x": {"name": "x"},
             "repos/paxel/x/private-vulnerability-reporting": denied,
             "repos/paxel/x/automated-security-fixes": denied,
+            "repos/paxel/x/actions/secrets?per_page=100": denied,
         }
         with (
             mock.patch.object(audit, "gh", side_effect=lambda _api, path: answers[path]),
@@ -157,6 +165,7 @@ class ListingTest(unittest.TestCase):
                 "private_vulnerability_reporting",
                 "push_protection",
                 "secret_scanning",
+                "secrets",
                 "vulnerability_alerts",
             ],
         )
@@ -169,6 +178,7 @@ class ListingTest(unittest.TestCase):
             "repos/paxel/x": {"security_and_analysis": {}},
             "repos/paxel/x/private-vulnerability-reporting": {"enabled": False},
             "repos/paxel/x/automated-security-fixes": {"_error": "gh: Not Found (HTTP 404)"},
+            "repos/paxel/x/actions/secrets?per_page=100": {"total_count": 0, "secrets": []},
         }
         with (
             mock.patch.object(audit, "gh", side_effect=lambda _api, path: answers[path]),
