@@ -4,7 +4,9 @@ import os
 import pathlib
 import tempfile
 import unittest
+import urllib.error
 from contextlib import redirect_stdout
+from email.message import Message
 from io import StringIO
 from typing import Any
 from unittest import mock
@@ -151,10 +153,48 @@ class OsvGateTest(unittest.TestCase):
         self.assertEqual(licences, [])
         self.assertIn("no licence", reason)
 
+    def http_error(self, code: int) -> urllib.error.HTTPError:
+        return urllib.error.HTTPError("https://pub.dev/x", code, "error", Message(), None)
+
+    def test_a_pub_dev_blip_that_clears_passes(self) -> None:
+        body = json.dumps({"tags": ["license:mit"]}).encode()
+        for blip in (
+            OSError("Temporary failure in name resolution"),
+            self.http_error(503),
+            self.http_error(429),
+        ):
+            with (
+                self.subTest(blip=str(blip)),
+                mock.patch("urllib.request.urlopen", side_effect=[blip, blip, self.answer(body)]) as urlopen,
+                mock.patch("time.sleep") as sleep,
+            ):
+                self.assertEqual(pub_licences("yaml", "3.1.3"), (["mit"], ""))
+                self.assertEqual(urlopen.call_count, 3)
+                self.assertEqual([c.args[0] for c in sleep.call_args_list], [2.0, 4.0])
+
+    def test_three_failed_pub_dev_tries_block(self) -> None:
+        with (
+            mock.patch("urllib.request.urlopen", side_effect=OSError("timed out")) as urlopen,
+            mock.patch("time.sleep"),
+        ):
+            licences, reason = pub_licences("yaml", "3.1.3")
+        self.assertEqual((licences, urlopen.call_count), ([], 3))
+        self.assertIn("timed out", reason)
+
+    def test_a_pub_dev_404_is_not_tried_again(self) -> None:
+        with (
+            mock.patch("urllib.request.urlopen", side_effect=self.http_error(404)) as urlopen,
+            mock.patch("time.sleep") as sleep,
+        ):
+            licences, reason = pub_licences("yaml", "9.9.9")
+        self.assertEqual((licences, urlopen.call_count, sleep.call_count), ([], 1, 0))
+        self.assertIn("404", reason)
+
     def test_an_unreadable_pub_dev_answer_names_no_licence(self) -> None:
         for effect in (OSError("timed out"), None):
-            with mock.patch(
-                "urllib.request.urlopen", side_effect=effect, return_value=self.answer(b"<html>")
+            with (
+                mock.patch("urllib.request.urlopen", side_effect=effect, return_value=self.answer(b"<html>")),
+                mock.patch("time.sleep"),
             ):
                 licences, reason = pub_licences("yaml", "3.1.3")
             self.assertEqual(licences, [])

@@ -85,11 +85,42 @@ jobs:
           body_path: notes.md
           files: dist/*
 
-  # A Dart package only; delete it in every other repository. pub.dev keeps a version for
-  # good, so it runs last, once the GitHub release is out. It publishes through OIDC, which
-  # pub.dev accepts only for a tag push matching the package's tag pattern (v{{version}}).
-  pub-dev:
+  # A Dart package only; delete pub-version and pub-dev in every other repository. pub.dev
+  # keeps a version for good, so they run last, once the GitHub release is out. pub-version
+  # asks pub.dev for the tag's version: a version already there (the first one, published by
+  # hand) skips the publish, a missing one is published, any other answer fails the release.
+  pub-version:
     needs: publish
+    runs-on: ubuntu-24.04
+    outputs:
+      publish: ${{ steps.ask.outputs.publish }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: ask
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          name=$(sed -n 's/^name:[[:space:]]*//p' pubspec.yaml | head -n 1 | tr -d "\"' \r")
+          [ -n "$name" ] || { echo "::error::no name in pubspec.yaml"; exit 1; }
+          version="${TAG#v}"
+          code=$(curl --proto '=https' --tlsv1.2 -s -o /dev/null -w '%{http_code}' --retry 2 --retry-delay 2 \
+            "https://pub.dev/api/packages/$name/versions/$version")
+          case "$code" in
+            404) echo "publish=true" >> "$GITHUB_OUTPUT" ;;
+            200)
+              echo "::notice::$name $version is already on pub.dev; nothing to publish"
+              echo "publish=false" >> "$GITHUB_OUTPUT"
+              ;;
+            *) echo "::error::pub.dev answered $code for $name $version"; exit 1 ;;
+          esac
+
+  # It publishes through OIDC, which pub.dev accepts only for a tag push matching the
+  # package's tag pattern (v{{version}}).
+  pub-dev:
+    needs: pub-version
+    if: needs.pub-version.outputs.publish == 'true'
     permissions:
       contents: read
       id-token: write

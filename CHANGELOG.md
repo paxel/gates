@@ -4,27 +4,16 @@ All notable changes to gates are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.4.0]
-
-### Added
-
-- `templates/code-scanning-ignores.toml` carries a commented, dated entry for Scorecard's
-  `FuzzingID` in a Dart repository, whose fuzzer Scorecard does not know
-  ([gate-1053](https://github.com/paxel/gates/issues/69)).
-- `templates/code-scanning-ignores.toml` carries a commented entry for Scorecard's `SASTID`
-  next to `MaintainedID`, dated the creation date plus 90 days, for a repository whose first
-  commits did not come through pull requests
-  ([gate-1055](https://github.com/paxel/gates/issues/71)).
-- A repository declares directories whose manifests are not a stack as `[[NotStacks]]` in a
-  `gates.toml` at its root; the audit leaves them out of stack detection and checks that every
-  entry has a path and a reason, while the OSV gate still scans them
-  ([gate-1052](https://github.com/paxel/gates/issues/68)).
+## [1.4.1]
 
 ### Fixed
 
-- The verification command in `provenance.yml` names the gates provenance workflow as signer
-  and the release tag as source, so it passes for a release attested through gates
-  ([gate-1054](https://github.com/paxel/gates/issues/70)).
+- The OSV gate asks pub.dev up to three times when a licence lookup meets a network error, a
+  timeout or a server error, so a short blip no longer blocks every Pub package
+  ([gate-1056](https://github.com/paxel/gates/issues/73)).
+- The release template publishes to pub.dev only a version that is not there yet, so the tag
+  of the first version, published by hand, no longer fails the release
+  ([gate-1057](https://github.com/paxel/gates/issues/74)).
 
 ---
 

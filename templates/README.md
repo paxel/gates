@@ -11,7 +11,7 @@ names.
 | `workflows/security.yml`            | `.github/workflows/security.yml`      | nothing                                               |
 | `workflows/codeql.yml`              | `.github/workflows/codeql.yml`        | the languages                                         |
 | `workflows/fuzz.yml`                | `.github/workflows/fuzz.yml`          | the stack and the targets                             |
-| `workflows/release.yml`             | `.github/workflows/release.yml`       | the build jobs; `pub-dev` for a Dart package only     |
+| `workflows/release.yml`             | `.github/workflows/release.yml`       | the build jobs; `pub-version`/`pub-dev` for Dart only |
 | `workflows/scorecard.yml`           | `.github/workflows/scorecard.yml`     | nothing; it must stay identical                       |
 | `workflows/content-ci.yml`          | `.github/workflows/ci.yml`            | for a repo without app code: kind and paths           |
 | `dependabot.yml`                    | `.github/dependabot.yml`              | keep the repo's ecosystems                            |
@@ -22,7 +22,8 @@ names.
 
 A Dart package publishes its first version by hand (`dart pub publish`); then, on the
 package's admin page on pub.dev, "Automated publishing" is enabled for the repository with the
-tag pattern `v{{version}}`, and the release's `pub-dev` job publishes every later version.
+tag pattern `v{{version}}`, and the release's `pub-dev` job publishes every later version. The
+tag of the version published by hand skips the publish: `pub-version` finds it on pub.dev.
 
 Secrets every repository sets: `GATES_ALERTS_TOKEN` (fine-grained, Secret scanning alerts: read)
 and `SQ_TOKEN` (SonarQube Cloud).
