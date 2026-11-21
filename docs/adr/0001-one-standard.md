@@ -51,7 +51,9 @@ the sonar job, because it cannot see what the file accepts; the findings alone d
 
 **Releases (Q7, Q8).** Every release file gets a build provenance attestation, the Sigstore
 bundle and a CycloneDX SBOM; npm and PyPI packages get their registry's provenance;
-registry-only libraries attach their packages to the GitHub release.
+registry-only libraries attach their packages to the GitHub release. Since 1.3.0 a Dart
+package is published to pub.dev by the release, last, after the GitHub release, through the
+Dart team's reusable workflow; its badge is a distribution badge.
 
 **README (Q9).** One badge row in a fixed order: CI · Security · CodeQL · Scorecard · Sonar
 quality gate · Coverage (per floor) · Fuzz · Release · License; Rust adds panic-free and

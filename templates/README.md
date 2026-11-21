@@ -20,5 +20,9 @@ names.
 | `coverage-floors.toml`              | `coverage-floors.toml`                | one part per measured package, floors from a first run |
 | `badges.md`                         | top of `README.md`                    | the repo's name, Rust or not, distribution badges     |
 
+A Dart package publishes its first version by hand (`dart pub publish`); then, on the
+package's admin page on pub.dev, "Automated publishing" is enabled for the repository with the
+tag pattern `v{{version}}`, and the release's `pub-dev` job publishes every later version.
+
 Secrets every repository sets: `GATES_ALERTS_TOKEN` (fine-grained, Secret scanning alerts: read)
 and `SQ_TOKEN` (SonarQube Cloud).

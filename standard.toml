@@ -100,7 +100,7 @@ rust = ["panic-free", "unsafe"]
 content_row = ["CI", "Security", "CodeQL", "Scorecard", "License"]
 distribution = [
   "crates.io", "docs.rs", "npm", "PyPI", "Maven Central", "pkg.go.dev", "F-Droid", "Homebrew",
-  "Scoop", "platforms", "docs", "Image", "cosign",
+  "Scoop", "platforms", "docs", "Image", "cosign", "pub.dev",
 ]
 
 # Scorecard findings that cannot be fixed by a single maintainer; every repository accepts
